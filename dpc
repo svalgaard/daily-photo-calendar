@@ -12,6 +12,7 @@ import codecs
 import random
 
 VERBOSE = 1
+TEXT_CALENDAR_YEARS = ['%(text)s 1 year', '%(text)s %(years)d years']
 
 
 def log(level, module, *msg):
@@ -161,49 +162,60 @@ def parseOpts():
 
 class Picture:
 
-    def __init__(self, fn, dt, txt):
+    def __init__(self, fn, dt, text):
         self.fn = fn
         self.date = dt
-        self.txt = txt
+        self.text = text
 
     def exists(self):
         lfn = os.path.expanduser(self.fn)
         return os.path.exists(lfn)
 
     def __repr__(self):
-        return '[Picture fn=%s dt=%s txt=%s]' % (
-            repr(self.fn), repr(self.date), repr(self.txt))
+        return '[Picture fn=%s dt=%s text=%s]' % (
+            repr(self.fn), repr(self.date), repr(self.text))
+
+
+def getFileContents(fn, columns):
+    '''Read fn, split using the first columns ';'. 
+Lines with less than columns ';' are ignored.
+Lines starting with # are ignored.'''
+    try:
+        data = open(fn, 'r').read()
+    except IOError, e:
+        error('getFileContents', 'Cannot open file', fn)
+
+    # try to decode using UTF-8
+    try:
+        data = data.decode('utf-8')
+    except UnicodeDecodeError:
+        # If utf-8 doesn't work, use iso-8859-1
+        data = data.decode('iso-8859-1')
+
+    res = []
+    for (i, line) in enumerate(data.splitlines()):
+        i = i + 1  # count from 1
+        line = line.strip()
+        if line.startswith('#') or not line:
+            continue
+        if line.count(';') < columns - 1:
+            log(2, 'getFileContents', fn, i,
+                'Ignoring line with too few ;', '(minimum %d)' % columns,
+                repr(line))
+            continue
+        line = line.split(';', columns - 1)
+        line = [x.strip() for x in line]
+        res.append((i, line))
+    return res
 
 
 def getPictures(pfns):
+    '''Format: filename; DateToShow; Text'''
     ps = []
 
     for pfn in pfns:
-        try:
-            data = open(pfn, 'r').read()
-        except IOError, e:
-            error('getPictures', 'Cannot open picture file', pfn)
-
-        # try to decode using UTF-8
-        try:
-            data = data.decode('utf-8')
-        except UnicodeDecodeError:
-            # If utf-8 doesn't work, use iso-8859-1
-            data = data.decode('iso-8859-1')
-
-        for (i, line) in enumerate(data.splitlines()):
-            i = i + 1  # count from 1
-            line = line.strip()
-            if line.startswith('#'):
-                continue
-            if not line:
-                continue
-            if line.count(';') < 2:
-                log(2, 'getPictures', pfn, i,
-                    'Ignoring line with missing ;', repr(line))
-                continue
-            fn, dt, txt = line.split(';', 2)
-            fn = fn.strip()
+        for (i, line) in getFileContents(pfn, 3):
+            fn, dt, text = line
             try:
                 dt2 = map(int, dt.strip().split('-'))
                 if dt2:
@@ -215,8 +227,7 @@ def getPictures(pfns):
                     log(2, 'getPictures', pfn, i, 'Ignoring datestamp',
                         repr(dt))
 
-            txt = txt.strip()
-            p = Picture(fn, dt, txt)
+            p = Picture(fn, dt, text)
             if not p.exists():
                 log(1, 'getPictures', pfn, i, 'File not available', p.fn)
                 continue
@@ -229,7 +240,7 @@ def getPictures(pfns):
 
 
 def getDates(options):
-    'Return list of dates we should create a calendar for'
+    'Return list of dates for which we should create a calendar'
     dates = []
     nextDate = options.start
     while nextDate <= options.stop:
@@ -268,16 +279,71 @@ def combinePicturesAndDates(options, pictures, dates):
     return zip(dates, pics)
 
 
+class CalendarDate:
+
+    def __init__(self, dt, tp, text):
+        self.date = dt
+        self.tp = tp
+        self.text = text
+
+    def validForRange(self, start, stop):
+        if '=' in self.tp:
+            # only exactly this day
+            return start <= self.date and self.date <= stop
+        else:
+            return True
+
+    def __repr__(self):
+        return '[CalendarDate date=%s tp=%s text=%s]' % (
+            repr(self.date), repr(self.tp), repr(self.text))
+
+
+def getCalendarDateFiles(dfns, start, stop):
+    '''Format Date;Type;Text
+* Date must be in the format YYYY-MM-DD. 
+  If Year should be ignored, use 1000, e.g., for Christmas Day
+* Type can contain a subset of these characters
+  - =: only show on exactly the day on Date, e.g., Easter Day
+  - a: birthday or anniversary 
+* Text 
+
+Two special values can be used to set the text shown for birthdates, etc
+TEXT_CALENDAR_YEARS;0;%(text)s 1 year
+TEXT_CALENDAR_YEARS;1;%(text)s %(years)d years
+
+'''
+    datesps = []
+
+    for dfn in dfns:
+        for (i, line) in getFileContents(dfn, 3):
+            dt, tp, text = line
+
+            if dt == 'TEXT_CALENDAR_YEARS':
+                tp = int(tp)
+                TEXT_CALENDAR_YEARS[tp] = text
+                continue
+
+            dt = datetime.date(*map(int, dt.split('-')))
+            cd = CalendarDate(dt, tp, text)
+            if cd.validForRange(start, stop):
+                datesps.append(cd)
+        log(1, 'getCalendarDateFiles', dfn, 'done')
+
+    log(1, 'getCalendarDateFiles', len(datesps),
+        'interesting calendar dates/birthdays/etc')
+
+
 def main():
     options = parseOpts()
 
-    # determine list of available pictures
+    # find picture and dates to use
     pictures = getPictures(options.pfns)
+    dateToUse = getDates(options)
+    datepics = combinePicturesAndDates(options, pictures, dateToUse)
 
-    # get list of dates we should create a calender for
-    dates = getDates(options)
-
-    datepic = combinePicturesAndDates(options, pictures, dates)
+    # import datefiles
+    datesInCalendar = getCalendarDateFiles(options.dfns,
+                                           options.start, options.stop)
 
     # now actually do a calendar
 
