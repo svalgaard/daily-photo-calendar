@@ -9,6 +9,7 @@ import datetime
 import os
 import sys
 import codecs
+import random
 
 VERBOSE = 1
 
@@ -226,6 +227,7 @@ def getPictures(pfns):
 
     return ps
 
+
 def getDates(options):
     'Return list of dates we should create a calendar for'
     dates = []
@@ -237,9 +239,33 @@ def getDates(options):
         else:
             dates.append(nextDate)
         nextDate += datetime.timedelta(days=1)
-    
+
     log(1, 'getDates', len(dates), 'dates')
     return dates
+
+
+def combinePicturesAndDates(options, pictures, dates):
+    'Return list of (date, Picture) for all dates'
+    if options.rseed is not None:
+        random.seed(options.rseed)
+
+    # do we have enough pictures?
+    if len(pictures) < len(dates):
+        log(1, 'combinePicturesAndDates',
+            'more dates than pictures - pictures will be reused')
+
+    pics = []
+
+    while len(pictures) <= len(dates) - len(pics):
+        pics += pictures
+    if len(pics) <= len(dates):
+        # still missing pictures
+        pics += random.sample(pics, len(dates) - len(pics))
+    assert(len(pics) == len(dates))
+
+    random.shuffle(pics)
+
+    return zip(dates, pics)
 
 
 def main():
@@ -250,14 +276,10 @@ def main():
 
     # get list of dates we should create a calender for
     dates = getDates(options)
-    
-    # do we have enough pictures
-    if len(pictures) < len(dates):
-        log(1, 'main', 'more dates than pictures - pictures will be reused')
 
+    datepic = combinePicturesAndDates(options, pictures, dates)
 
-    # now use the options, Luke.
-    # FIXME
+    # now actually do a calendar
 
 
 if __name__ == '__main__':
