@@ -48,6 +48,10 @@ def parseOpts():
     parser.add_option("-t", "--stop", dest='stop',
                       default='', action="store",
                       help="Stop date (must be a YYYY-MM-DD prefix)")
+    parser.add_option("-w", "--weekdaysonly", dest='weekdaysonly',
+                      default=False, action="store_true",
+                      help="Only create a calendar for week days "
+                      "(Monday through Friday)")
 
     parser.add_option("-r", "--randomseed", dest='rseed',
                       default=None, action="store", type='int',
@@ -171,7 +175,6 @@ class Picture:
 
 
 def getPictures(pfns):
-
     ps = []
 
     for pfn in pfns:
@@ -214,20 +217,45 @@ def getPictures(pfns):
             txt = txt.strip()
             p = Picture(fn, dt, txt)
             if not p.exists():
-                log(1, 'getPictures', pfn, i, 'File no longer available', p.fn)
+                log(1, 'getPictures', pfn, i, 'File not available', p.fn)
                 continue
             ps.append(p)
-        log(1, 'getPictures', pfn, 'Done')
+        log(1, 'getPictures', 'Reading', pfn, 'done')
 
     log(1, 'getPictures', len(ps), 'pictures available')
 
     return ps
 
+def getDates(options):
+    'Return list of dates we should create a calendar for'
+    dates = []
+    nextDate = options.start
+    while nextDate <= options.stop:
+        if options.weekdaysonly and nextDate.weekday() > 5:
+            # ignore
+            pass
+        else:
+            dates.append(nextDate)
+        nextDate += datetime.timedelta(days=1)
+    
+    log(1, 'getDates', len(dates), 'dates')
+    return dates
+
 
 def main():
     options = parseOpts()
 
+    # determine list of available pictures
     pictures = getPictures(options.pfns)
+
+    # get list of dates we should create a calender for
+    dates = getDates(options)
+    
+    # do we have enough pictures
+    if len(pictures) < len(dates):
+        log(1, 'main', 'more dates than pictures - pictures will be reused')
+
+
     # now use the options, Luke.
     # FIXME
 
