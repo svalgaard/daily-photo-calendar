@@ -1,0 +1,236 @@
+#! /usr/bin/env python
+# -*- encoding: utf-8 -*-
+#
+#
+
+import optparse
+import re
+import datetime
+import os
+import sys
+import codecs
+
+VERBOSE = 1
+
+
+def log(level, module, *msg):
+    '''
+    level = 0 is always printed
+    level = 1 is normally printed
+    level = 2 is only printed with -v options
+    '''
+    global VERBOSE
+    if level <= VERBOSE:
+        sys.stderr.write(u'[%s] %s\n' % (module, ' '.join(map(unicode, msg))))
+        sys.stderr.flush()
+
+
+def error(module, *msg):
+    log(-1, module, *msg)
+    log(-1, module, 'Fatal error - EXIT')
+    sys.exit(1)
+
+
+def parseOpts():
+    parser = optparse.OptionParser()
+
+    parser.add_option("-i", "--input", dest="pfns", default=[],
+                      help="Input picfile (multiple -i's allowed)",
+                      metavar="FILENAME", action='append')
+
+    parser.add_option("-d", "--dates", dest="dfns", default=[],
+                      help="Input datefiles (multiple -d's allowed)",
+                      metavar="FILENAME", action='append')
+
+    parser.add_option("-s", "--start", dest='start',
+                      default='', action="store",
+                      help="Start date (must be a YYYY-MM-DD prefix)")
+    parser.add_option("-t", "--stop", dest='stop',
+                      default='', action="store",
+                      help="Stop date (must be a YYYY-MM-DD prefix)")
+
+    parser.add_option("-r", "--randomseed", dest='rseed',
+                      default=None, action="store", type='int',
+                      help="Random seed number for the random seq generator")
+    parser.add_option("-f", "--format", dest='format',
+                      default=None, action="store",
+                      help="Picture format (FIXME)")
+
+    parser.add_option("-o", "--outdir", dest="odn", default=None,
+                      help="Output directory (default /tmp/cal365/PREFIX)",
+                      metavar="DIRNAME", action='store')
+    parser.add_option("-p", "--prefix", dest="prefix", default=None,
+                      help="Prefix for calendar pictures "
+                      "(default dirname from -o option)",
+                      metavar="PREFIX", action='store')
+
+    parser.add_option("-v", "--verbose", dest="verbose", default=False,
+                      help="Be more verbose",
+                      action='store_true')
+
+    (options, args) = parser.parse_args()
+
+    if args:
+        parser.error('Only options allowed. Use --help for more information')
+
+    # now check all the options
+    if not options.pfns:
+        parser.error('You must supply at least one -i option')
+
+    # fixme : check that pfns and dfns are actually existing files
+
+    # check start and stop date
+    rem = re.compile(ur'^(?:(\d\d\d\d)(?:-([01]\d)(?:-([0123]\d))?)?)$')
+    if not options.start:
+        parser.error('Start date required (-s)')
+    s = rem.match(options.start)
+    if not s:
+        parser.error('Start date is not in YYYY-MM-DD format')
+    s = list(s.groups())
+    if not s[1]:
+        s[1] = 1
+    if not s[2]:
+        s[2] = 1
+    s = map(int, s)
+    try:
+        options.start = datetime.date(*s)
+    except ValueError, e:
+        parser.error('Start date is not in YYYY-MM-DD format (%s)' % e.message)
+
+    t = rem.match(options.stop)
+    if options.stop and not t:
+        parser.error('Stop date is not in YYYY-MM-DD format')
+    findLastDay = False
+    if not t:
+        t = [s[0], 12, 31]
+    else:
+        t = list(t.groups())
+        t[0] = int(t[0])
+        t[1] = int(t[1]) if t[1] else 12
+        if t[2]:
+            t[2] = int(t[2])
+        else:
+            # find last day of this month
+            t[2] = 28
+            findLastDay = True
+    try:
+        options.stop = datetime.date(*t)
+    except ValueError, e:
+        parser.error('Start date is not in YYYY-MM-DD format (%s)' % e.message)
+    if findLastDay:
+        for i in range(4):
+            st = options.stop
+            nxt = st.fromordinal(st.toordinal() + 1)
+            if st.month == nxt.month:
+                print ')))', nxt
+                options.stop = nxt
+            else:
+                break
+        else:
+            assert(0)  # you should never be here, 28+4 > 31
+
+    if options.start > options.stop:
+        parser.error('Start date cannot be later than stop date (-s/-t)')
+
+    if options.format:
+        parser.error('-f not supported yet. FIXME')
+
+    if not options.odn and not options.prefix:
+        parser.error('Either -o or -p must be used')
+
+    if not options.odn and options.prefix:
+        options.odn = os.path.join('/tmp/cal365', options.prefix)
+    if options.odn and not options.prefix:
+        options.prefix = os.path.basename(options.odn.rstrip(os.sep))
+
+    if os.sep in options.prefix:
+        parser.error('Prefix -p cannot contain %s' % os.sep)
+
+    if options.verbose:
+        global VERBOSE
+        VERBOSE += 1
+        log(2, 'setup', options)
+
+    return options
+
+
+class Picture:
+
+    def __init__(self, fn, dt, txt):
+        self.fn = fn
+        self.date = dt
+        self.txt = txt
+
+    def exists(self):
+        lfn = os.path.expanduser(self.fn)
+        return os.path.exists(lfn)
+
+    def __repr__(self):
+        return '[Picture fn=%s dt=%s txt=%s]' % (
+            repr(self.fn), repr(self.date), repr(self.txt))
+
+
+def getPictures(pfns):
+
+    ps = []
+
+    for pfn in pfns:
+        try:
+            data = open(pfn, 'r').read()
+        except IOError, e:
+            error('getPictures', 'Cannot open picture file', pfn)
+
+        # try to decode using UTF-8
+        try:
+            data = data.decode('utf-8')
+        except UnicodeDecodeError:
+            # If utf-8 doesn't work, use iso-8859-1
+            data = data.decode('iso-8859-1')
+
+        for (i, line) in enumerate(data.splitlines()):
+            i = i + 1  # count from 1
+            line = line.strip()
+            if line.startswith('#'):
+                continue
+            if not line:
+                continue
+            if line.count(';') < 2:
+                log(2, 'getPictures', pfn, i,
+                    'Ignoring line with missing ;', repr(line))
+                continue
+            fn, dt, txt = line.split(';', 2)
+            fn = fn.strip()
+            try:
+                dt2 = map(int, dt.strip().split('-'))
+                if dt2:
+                    dt = datetime.date(*dt2)
+                else:
+                    dt = None
+            except ValueError:
+                if dt:
+                    log(2, 'getPictures', pfn, i, 'Ignoring datestamp',
+                        repr(dt))
+
+            txt = txt.strip()
+            p = Picture(fn, dt, txt)
+            if not p.exists():
+                log(1, 'getPictures', pfn, i, 'File no longer available', p.fn)
+                continue
+            ps.append(p)
+        log(1, 'getPictures', pfn, 'Done')
+
+    log(1, 'getPictures', len(ps), 'pictures available')
+
+    return ps
+
+
+def main():
+    options = parseOpts()
+
+    pictures = getPictures(options.pfns)
+    # now use the options, Luke.
+    # FIXME
+
+
+if __name__ == '__main__':
+    main()
