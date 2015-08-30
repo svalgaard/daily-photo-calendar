@@ -94,6 +94,7 @@ class More:
     def __getitem__(self, i):
         return self.arg[i]
 
+
 def deMore(args, n):
     for (k, v) in args.__dict__.items():
         if type(v) == More:

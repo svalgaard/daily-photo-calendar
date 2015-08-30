@@ -59,10 +59,41 @@ def decorateImage(image):
     if 'drw' not in dir(image):
         image.drw = PIL.ImageDraw.Draw(image)
 
-        def isLandscape():
-            return image.size[0] >= image.size[1]
-        image.isLandscape = isLandscape
+        image.isLandscape = isLandscape.__get__(image, image.__class__)
+        image.rotateCW = rotateCW.__get__(image, image.__class__)
+        image.rotateCCW = rotateCCW.__get__(image, image.__class__)
+
     return image
+
+
+def isLandscape(image):
+    return image.size[0] >= image.size[1]
+
+
+def rotateCW(image):
+    res = image.transpose(PIL.Image.ROTATE_270)
+    res = decorateImage(res)
+
+    if 'box' in dir(image):
+        # also rotate the box
+        box = image.box
+        res.box = (image.size[1] - box[3], box[0],
+                   image.size[1] - box[1], box[2])
+
+    return decorateImage(res)
+
+
+def rotateCCW(image):
+    res = image.transpose(PIL.Image.ROTATE_90)
+    res = decorateImage(res)
+
+    if 'box' in dir(image):
+        # also rotate the box
+        box = image.box
+        res.box = (box[1], image.size[0] - box[2],
+                   box[3], image.size[0] - box[0])
+
+    return decorateImage(res)
 
 
 def textDraw(image, box, text, color, font, position=CENTER):

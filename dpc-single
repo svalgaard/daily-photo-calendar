@@ -11,34 +11,35 @@ import sys
 import PIL.ImageColor
 
 
-def handle(args):
-    global image
+def addPicture(image, args, goTOP=None):
+    TOP = args.format[0] == 't' if goTOP is None else goTOP
+    libdpc.debug('addPicture', 'At top?', TOP)
+
+    # handle portrait images
+    if not args.image.isLandscape():
+        if TOP:
+            libdpc.debug('addPicture', 'portrait image: rotating CW')
+            args.image = args.image.rotateCW()
+            image = addPicture(image.rotateCW(), args).rotateCCW()
+            args.image = args.image.rotateCCW()
+        else:
+            libdpc.debug('addPicture', 'portrait image: rotating CCW')
+            args.image = args.image.rotateCCW()
+            image = addPicture(image.rotateCCW(), args, True).rotateCW()
+            args.image = args.image.rotateCW()
+        return image
 
     # margin in pixels
     mpO = args.size[1] * args.marginOuter / 100
     mpI = args.size[1] * args.marginInner / 100
     libdpc.debug('handle', 'Margins in pixels:', mpO, mpI)
 
-    libdpc.debug('handle', 'Image is landscape?', args.image.isLandscape())
-    if args.image.isLandscape():
-        image = PIL.Image.new('RGB', args.size, args.bgcolor)
-        pimg = args.image
-    else:
-        image = PIL.Image.new('RGB', args.size[::-1], args.bgcolor)
-        pimg = args.image.transpose(PIL.Image.ROTATE_270)
-        libdpc.debug('handle', 'Input image rotated CW')
-
-    format = (args.format[0], tuple(args.format[1:]))
-    libdpc.debug('handle', 'Format used', format)
-
     x, y, w, h = 0, 0, image.size[0], image.size[1]
     h = int(image.size[0] / args.ratio)
-
-    assert(format and format[0] in 'tb')
-    if format[0] != 't':
+    if not TOP:
         y = image.size[1] - h
 
-    pimg = libpic.cropImage(pimg, (w, h), False)
+    pimg = libpic.cropImage(args.image, (w, h), False)
     image.paste(pimg, (x, y))
     libdpc.debug('handle', (x, y, w, h), 'Input image pasted')
 
@@ -47,7 +48,7 @@ def handle(args):
         th = args.textFont.dsize
         if not th or th <= 0:
             th = int(mpI)
-        if format[0] == 't':
+        if TOP:
             box = libpic.intBox((mpO, h, w-mpO, h + th))  # text below image
         else:
             box = libpic.intBox((mpO, y - th, w-mpO, y))
@@ -58,32 +59,28 @@ def handle(args):
                         font, position=(-1, libpic.CENTER))
         libdpc.debug('handle', box, 'Text', repr(args.text))
 
-    # maybe rotate the image back
-    if not args.image.isLandscape():
-        image = image.transpose(PIL.Image.ROTATE_90)
-        image = libpic.decorateImage(image)
-        libdpc.debug('handle', 'Output image rotated CCW')
-
-    # Now prepare for the box(es) with "content"
-    box = [mpO, mpO, image.size[0]-mpO, image.size[1]-mpO]
-    if format[0] == 'b':
-        if args.image.isLandscape():
-            box[3] = y - mpI
-        else:
-            box[2] = y - mpI
+    # determine location of remaining space
+    a, b, c, d = mpO, mpO, image.size[0] - mpO, image.size[1] - mpO
+    if TOP:
+        # at the bottom
+        b = h + mpI
     else:
-        if args.image.isLandscape():
-            box[1] = h + mpI
-        else:
-            box[0] = h + mpI
-    box = libpic.intBox(box)
+        d = y - mpI
 
-    libdpc.debug('handle', box, 'Content-area')
+    image.box = libpic.intBox((a, b, c, d))
+    return image
 
-    boxes = []
-    boxCount, w, h = len(format[1]), box[2]-box[0], box[3]-box[1]
+
+def findContentBoxes(image, args):
+    libdpc.debug('handle', image.box, 'Content-area')
+    fmts = args.format[1]
+
+    mpI = args.size[1] * args.marginInner / 100
+
+    boxes, boxCount = [], len(fmts)
+    w, h = image.box[2]-image.box[0], image.box[3]-image.box[1]
     for i in range(boxCount):
-        a, b, c, d = box
+        a, b, c, d = image.box
         if w > h:
             # landscape
             boxw = (w - mpI*(boxCount-1)) / boxCount
@@ -93,13 +90,23 @@ def handle(args):
             boxh = (h - mpI*(boxCount-1)) / boxCount
             b += (boxh + mpI) * i
             d = b + boxh
-        boxes.append((format[1][i], tuple(map(int, (a, b, c, d)))))
+        boxes.append((fmts[i], tuple(map(int, (a, b, c, d)))))
+    return boxes
 
+
+def handle(args):
+    global image
+
+    libdpc.debug('handle', 'Format used', args.format)
+
+    image = libpic.decorateImage(PIL.Image.new('RGB', args.size, args.bgcolor))
+    image = addPicture(image, args)
+
+    boxes = findContentBoxes(image, args)
     for i, (f, box) in enumerate(boxes):
         libdpc.debug('handle', box, 'Subbox', i, 'format', f)
         image.drw.rectangle(box, (0, 0, 0), (0, 0, 255))
 
-    # print ("EXIT!"); sys.exit(0)
     image.show()
 
 
@@ -188,11 +195,12 @@ portrait pictures).'''
     # use options depending on whether it's a landscape or portrait image
     libarg.deMore(args, 0 if args.image.isLandscape() else 1)
 
-    # Now check each option
+    # Now check some of options
     libdpc.VERBOSE = 2 if args.verbose else 1
 
     args.size = tuple(map(int, args.size.split('x')))
     args.format = args.format.lower()
+    args.format = (args.format[0], tuple(args.format[1:]))
 
     handle(args)
 
