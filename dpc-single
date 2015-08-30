@@ -1,0 +1,145 @@
+#! /usr/bin/env python3
+# -*- encoding: utf-8 -*-
+#
+#
+
+import argparse
+import libdpc
+import libpic
+import libarg
+import sys
+import PIL.ImageColor
+
+
+def handle(args):
+    global image
+
+    pimage = args.image
+
+    if pimage.isLandscape():
+        image = PIL.Image.new('RGB', args.size, args.bgcolor)
+        pimg = pimage
+        format = args.format[0]
+    else:
+        image = PIL.Image.new('RGB', args.size[::-1], args.bgcolor)
+        pimg = pimage.transpose(PIL.Image.ROTATE_270)
+        format = args.format[1]
+
+    x, y, w, h = 0, 0, image.size[0], image.size[1]
+    h = int(image.size[0] / args.ratio)
+
+    assert(format and format[0] in 'tb')
+    if format[0] != 't':
+        y = args.size[1] - h
+
+    pimg = libpic.cropImage(pimg, (w, h), False)
+    image.paste(pimg, (x, y))
+
+    print (args)
+
+    if args.text:
+        # we are always slightly above or below the image
+        th = args.textFont.dsize
+        if not th or th <= 0:
+            th = int(args.size[1] * args.margin / 100 / 2)
+        if format[0] == 't':
+            box = (0, h, w, h + th)  # text below image
+        else:
+            box = (0, h - th, w, h)
+        font = PIL.ImageFont.truetype(args.textFont.dlfn, 2*th//3)
+
+        print(box)
+        libpic.textDraw(image, box,
+                        args.text, args.textColor,
+                        font, position=(-th, libpic.CENTER))
+
+        print ("EXIT!")
+        #sys.exit(0)
+    
+    # fixme - add text
+
+    if not pimage.isLandscape():
+        image = image.transpose(PIL.Image.ROTATE_90)
+        image = libpic.decorateImage(image)
+
+    image.show()
+
+
+def main():
+    parser = argparse.ArgumentParser(description='Create a single '
+                                     'calendar page')
+
+    parser.add_argument('-v', '--verbose', dest='verbose', default=False,
+                        help='Be more verbose',
+                        action='store_true')
+
+    pgen = parser.add_argument_group('General setup')
+    pgen.add_argument('-s', '--size', dest='size', default='1200x1050',
+                      help='size of a page in pixels '
+                      '(default %(default)s)',
+                      metavar='SIZE',
+                      type=libarg.REType('WIDTHxHEIGHT', r'\d+x\d+'))
+    pgen.add_argument('-m', '--margin', dest='margin', default='5',
+                      help='margin around/between the non picture elements '
+                      ' in %% (default %(default)s)',
+                      metavar='RATIO',
+                      type=libarg.RangeCheck(float, 0, 40))
+    pgen.add_argument('-f', '--format', dest='format',
+                      default='T:T',
+                      help='format of each page (default %(default)s)',
+                      metavar='FORMAT',
+                      type=libarg.REType('Landscape:Portrait',
+                                         r'(?i)[TB]:[TB]'))
+    pgen.add_argument('--bgcolor', dest='bgcolor', default='#DEDEDE',
+                      help='background color (default %(default)s)',
+                      metavar='COLOR',
+                      type=PIL.ImageColor.getrgb)
+
+    ppic = parser.add_argument_group('Picture')
+    ppic.add_argument('-p', '--picture', dest='imagefd', default=None,
+                      help='filename of picture to use',
+                      metavar='FILENAME', required=True,
+                      type=argparse.FileType('rb'))
+    ppic.add_argument('-r', '--ratio', dest='ratio', default='3:2',
+                      help='ratio to crop all images to',
+                      metavar='RATIO',
+                      type=libarg.REType('W:H', r'\d:\d+'))
+    ppic.add_argument('--text', dest='text', default='',
+                      help='text to show below image (default none)',
+                      metavar='TEXT',
+                      type=str)
+    ppic.add_argument('--text-font', dest='textFont',
+                      default='Raleway-Regular',
+                      help='font for text to show below image '
+                      '(default %(default)s)',
+                      metavar='FONT',
+                      type=libarg.Font)
+    ppic.add_argument('--text-color', dest='textColor',
+                      default='#000000',
+                      help='color for text to show below image '
+                      '(default %(default)s)',
+                      metavar='COLOR',
+                      type=PIL.ImageColor.getrgb)
+
+    args = parser.parse_args()
+
+    # Now check each option
+    libdpc.VERBOSE = 2 if args.verbose else 1
+
+    args.size = tuple(map(int, args.size.split('x')))
+    args.ratio = tuple(sorted(map(int, args.ratio.split(':'))))
+    args.ratio = args.ratio[1] / args.ratio[0]
+    args.format = args.format.lower().split(':')
+    try:
+        # The file has already been opened
+        args.image = libpic.decorateImage(PIL.Image.open(args.imagefd))
+    except IOError:
+        libdpc.error('main', '%r does not contain valid image data' %
+                     args.imagefd.name)
+        sys.exit(1)
+
+    handle(args)
+
+
+if __name__ == '__main__':
+    main()
