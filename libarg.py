@@ -85,3 +85,30 @@ def Font(name):
         print ('  %s (found in %s)' % (sn, lfn))
 
     raise argparse.ArgumentTypeError('Font %r not found' % name)
+
+
+class More:
+    def __init__(self, arg):
+        self.arg = arg
+
+    def __getitem__(self, i):
+        return self.arg[i]
+
+def deMore(args, n):
+    for (k, v) in args.__dict__.items():
+        if type(v) == More:
+            args.__dict__[k] = v[n]
+
+
+def maybeMore(subType, n=2, sep=':'):
+    def check(s):
+        sp = s.split(sep)
+        if len(sp) == 1:
+            res = subType(s)
+            return More((res,)*n)
+        elif len(sp) == n:
+            return More(tuple(map(subType, sp)))
+
+        raise ValueError('You should either not use any %r or exactly %d' %
+                         (sep, n-1))
+    return check

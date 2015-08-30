@@ -65,20 +65,18 @@ def decorateImage(image):
     return image
 
 
-def textDraw(image, box, text, color, font, position=None):
+def textDraw(image, box, text, color, font, position=CENTER):
     global CENTER
     decorateImage(image)
 
     boxsize = (box[2] - box[0], box[3] - box[1])
     textsize = image.drw.textsize(text, font)
 
-    if position is None:
-        position = CENTER
-    if type(position) in [str, int]:
-        position = (position, position)
-
-    pos = list(position)
-    assert(len(position) == 2)
+    if type(position) not in (tuple, list):
+        pos = [position, position]
+    else:
+        pos = list(position)
+    assert(len(pos) == 2)
 
     for i in range(2):
         if pos[i] is CENTER:
@@ -86,8 +84,18 @@ def textDraw(image, box, text, color, font, position=None):
         elif pos[i] < 0:
             pos[i] = box[i] + boxsize[i] + pos[i] - textsize[i]
         else:
-            pos[i] = box[i]+pos[i] # go from relative to absolute
+            pos[i] = box[i]+pos[i]  # go from relative to absolute
 
-    # image.drw.ellipse((pos[0]-2,pos[1]-2,pos[0]+2,pos[1]+2), fill=(0,0,0))
-    image.drw.text(pos, text, font = font, fill=color)
+    image.drw.text(pos, text, font=font, fill=color)
 
+
+def scaleFont(font, newSize):
+    dlfn = font if type(font) == str else font.dlfn
+    font = PIL.ImageFont.truetype(dlfn, newSize)
+    font.dlfn = dlfn
+    font.dsize = newSize
+    return font
+
+
+def intBox(box):
+    return tuple(int(b+.5) for b in box)

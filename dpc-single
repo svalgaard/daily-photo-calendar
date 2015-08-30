@@ -14,122 +14,169 @@ import PIL.ImageColor
 def handle(args):
     global image
 
-    pimage = args.image
+    # margin in pixels
+    mpO = args.size[1] * args.marginOuter / 100
+    mpI = args.size[1] * args.marginInner / 100
+    libdpc.debug('handle', 'Margins in pixels:', mpO, mpI)
 
-    if pimage.isLandscape():
+    libdpc.debug('handle', 'Image is landscape?', args.image.isLandscape())
+    if args.image.isLandscape():
         image = PIL.Image.new('RGB', args.size, args.bgcolor)
-        pimg = pimage
-        format = args.format[0]
+        pimg = args.image
     else:
         image = PIL.Image.new('RGB', args.size[::-1], args.bgcolor)
-        pimg = pimage.transpose(PIL.Image.ROTATE_270)
-        format = args.format[1]
+        pimg = args.image.transpose(PIL.Image.ROTATE_270)
+        libdpc.debug('handle', 'Input image rotated CW')
+
+    format = (args.format[0], tuple(args.format[1:]))
+    libdpc.debug('handle', 'Format used', format)
 
     x, y, w, h = 0, 0, image.size[0], image.size[1]
     h = int(image.size[0] / args.ratio)
 
     assert(format and format[0] in 'tb')
     if format[0] != 't':
-        y = args.size[1] - h
+        y = image.size[1] - h
 
     pimg = libpic.cropImage(pimg, (w, h), False)
     image.paste(pimg, (x, y))
-
-    print (args)
+    libdpc.debug('handle', (x, y, w, h), 'Input image pasted')
 
     if args.text:
         # we are always slightly above or below the image
         th = args.textFont.dsize
         if not th or th <= 0:
-            th = int(args.size[1] * args.margin / 100 / 2)
+            th = int(mpI)
         if format[0] == 't':
-            box = (0, h, w, h + th)  # text below image
+            box = libpic.intBox((mpO, h, w-mpO, h + th))  # text below image
         else:
-            box = (0, h - th, w, h)
-        font = PIL.ImageFont.truetype(args.textFont.dlfn, 2*th//3)
+            box = libpic.intBox((mpO, y - th, w-mpO, y))
+        font = libpic.scaleFont(args.textFont, 2*th//3)
 
-        print(box)
         libpic.textDraw(image, box,
                         args.text, args.textColor,
-                        font, position=(-th, libpic.CENTER))
+                        font, position=(-1, libpic.CENTER))
+        libdpc.debug('handle', box, 'Text', repr(args.text))
 
-        print ("EXIT!")
-        #sys.exit(0)
-    
-    # fixme - add text
-
-    if not pimage.isLandscape():
+    # maybe rotate the image back
+    if not args.image.isLandscape():
         image = image.transpose(PIL.Image.ROTATE_90)
         image = libpic.decorateImage(image)
+        libdpc.debug('handle', 'Output image rotated CCW')
 
+    # Now prepare for the box(es) with "content"
+    box = [mpO, mpO, image.size[0]-mpO, image.size[1]-mpO]
+    if format[0] == 'b':
+        if args.image.isLandscape():
+            box[3] = y - mpI
+        else:
+            box[2] = y - mpI
+    else:
+        if args.image.isLandscape():
+            box[1] = h + mpI
+        else:
+            box[0] = h + mpI
+    box = libpic.intBox(box)
+
+    libdpc.debug('handle', box, 'Content-area')
+
+    boxes = []
+    boxCount, w, h = len(format[1]), box[2]-box[0], box[3]-box[1]
+    for i in range(boxCount):
+        a, b, c, d = box
+        if w > h:
+            # landscape
+            boxw = (w - mpI*(boxCount-1)) / boxCount
+            a += (boxw + mpI) * i
+            c = a + boxw
+        else:
+            boxh = (h - mpI*(boxCount-1)) / boxCount
+            b += (boxh + mpI) * i
+            d = b + boxh
+        boxes.append((format[1][i], tuple(map(int, (a, b, c, d)))))
+
+    for i, (f, box) in enumerate(boxes):
+        libdpc.debug('handle', box, 'Subbox', i, 'format', f)
+        image.drw.rectangle(box, (0, 0, 0), (0, 0, 255))
+
+    # print ("EXIT!"); sys.exit(0)
     image.show()
 
 
+def mmarg(arg, **args):
+    assert(arg.type)
+    arg.type = libarg.maybeMore(arg.type, **args)
+    arg.mm = True
+    return arg
+
+
 def main():
-    parser = argparse.ArgumentParser(description='Create a single '
-                                     'calendar page')
+    desc = '''Create a single calendar page.
+
+In all cases where it makes sense, unless otherwise noted all options
+can be supplied with two suboptions for landscape resp. portrait images,
+e.g., --margin-inner 4:5 (meaning 4% for landscape pictures and 5% for
+portrait pictures).'''
+    parser = argparse.ArgumentParser(description=desc)
 
     parser.add_argument('-v', '--verbose', dest='verbose', default=False,
                         help='Be more verbose',
                         action='store_true')
 
     pgen = parser.add_argument_group('General setup')
-    pgen.add_argument('-s', '--size', dest='size', default='1200x1050',
-                      help='size of a page in pixels '
-                      '(default %(default)s)',
-                      metavar='SIZE',
-                      type=libarg.REType('WIDTHxHEIGHT', r'\d+x\d+'))
-    pgen.add_argument('-m', '--margin', dest='margin', default='5',
-                      help='margin around/between the non picture elements '
-                      ' in %% (default %(default)s)',
-                      metavar='RATIO',
-                      type=libarg.RangeCheck(float, 0, 40))
-    pgen.add_argument('-f', '--format', dest='format',
-                      default='T:T',
-                      help='format of each page (default %(default)s)',
-                      metavar='FORMAT',
-                      type=libarg.REType('Landscape:Portrait',
-                                         r'(?i)[TB]:[TB]'))
-    pgen.add_argument('--bgcolor', dest='bgcolor', default='#DEDEDE',
-                      help='background color (default %(default)s)',
-                      metavar='COLOR',
-                      type=PIL.ImageColor.getrgb)
+    mmarg(pgen.add_argument('-s', '--size', dest='size', default='1200x1050',
+                            help='size of a page in pixels '
+                            '(default %(default)s)',
+                            metavar='SIZE',
+                            type=libarg.REType('WIDTHxHEIGHT', r'\d+x\d+')))
+    mmarg(pgen.add_argument('--margin-outer', dest='marginOuter',
+                            default='4.5', metavar='RATIO',
+                            help='outer margin in %% (default %(default)s)',
+                            type=libarg.RangeCheck(float, 0, 40)))
+    mmarg(pgen.add_argument('--margin-inner', dest='marginInner',
+                            metavar='RATIO', default='2.25',
+                            help='inner margin in %% (default %(default)s)',
+                            type=libarg.RangeCheck(float, 0, 20)))
+    mmarg(pgen.add_argument('-f', '--format', dest='format',
+                            default='Tmdc',
+                            help='format of each page (default %(default)s)',
+                            metavar='FORMAT',
+                            type=libarg.REType('[TB][mdc_]{3}',
+                                               r'(?i)[TB][mdc_]{3}')))
+    mmarg(pgen.add_argument('--bgcolor', dest='bgcolor', default='#DEDEDE',
+                            help='background color (default %(default)s)',
+                            metavar='COLOR',
+                            type=PIL.ImageColor.getrgb))
 
     ppic = parser.add_argument_group('Picture')
     ppic.add_argument('-p', '--picture', dest='imagefd', default=None,
                       help='filename of picture to use',
                       metavar='FILENAME', required=True,
                       type=argparse.FileType('rb'))
-    ppic.add_argument('-r', '--ratio', dest='ratio', default='3:2',
-                      help='ratio to crop all images to',
-                      metavar='RATIO',
-                      type=libarg.REType('W:H', r'\d:\d+'))
+    mmarg(ppic.add_argument('-r', '--ratio', dest='ratio', default='1.5:1.33333',
+                            help='ratio to crop all images to '
+                            '(default %(default)s)',
+                            metavar='RATIO',
+                            type=libarg.RangeCheck(float, 0, 10)))
     ppic.add_argument('--text', dest='text', default='',
                       help='text to show below image (default none)',
                       metavar='TEXT',
                       type=str)
-    ppic.add_argument('--text-font', dest='textFont',
-                      default='Raleway-Regular',
-                      help='font for text to show below image '
-                      '(default %(default)s)',
-                      metavar='FONT',
-                      type=libarg.Font)
-    ppic.add_argument('--text-color', dest='textColor',
-                      default='#000000',
-                      help='color for text to show below image '
-                      '(default %(default)s)',
-                      metavar='COLOR',
-                      type=PIL.ImageColor.getrgb)
+    mmarg(ppic.add_argument('--text-font', dest='textFont',
+                            default='Raleway-Regular',
+                            help='font for text to show below image '
+                            '(default %(default)s)',
+                            metavar='FONT',
+                            type=libarg.Font))
+    mmarg(ppic.add_argument('--text-color', dest='textColor',
+                            default='#000000',
+                            help='color for text to show below image '
+                            '(default %(default)s)',
+                            metavar='COLOR',
+                            type=PIL.ImageColor.getrgb))
 
     args = parser.parse_args()
 
-    # Now check each option
-    libdpc.VERBOSE = 2 if args.verbose else 1
-
-    args.size = tuple(map(int, args.size.split('x')))
-    args.ratio = tuple(sorted(map(int, args.ratio.split(':'))))
-    args.ratio = args.ratio[1] / args.ratio[0]
-    args.format = args.format.lower().split(':')
     try:
         # The file has already been opened
         args.image = libpic.decorateImage(PIL.Image.open(args.imagefd))
@@ -137,6 +184,15 @@ def main():
         libdpc.error('main', '%r does not contain valid image data' %
                      args.imagefd.name)
         sys.exit(1)
+
+    # use options depending on whether it's a landscape or portrait image
+    libarg.deMore(args, 0 if args.image.isLandscape() else 1)
+
+    # Now check each option
+    libdpc.VERBOSE = 2 if args.verbose else 1
+
+    args.size = tuple(map(int, args.size.split('x')))
+    args.format = args.format.lower()
 
     handle(args)
 

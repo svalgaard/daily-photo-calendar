@@ -16,8 +16,16 @@ def log(level, module, *msg):
     '''
     global VERBOSE
     if level <= VERBOSE:
-        sys.stderr.write(u'[%s] %s\n' % (module, ' '.join(map(unicode, msg))))
+        sys.stderr.write(u'[%s] %s\n' % (module, ' '.join(map(str, msg))))
         sys.stderr.flush()
+
+
+def info(module, *msg):
+    log(1, module, *msg)
+
+
+def debug(module, *msg):
+    log(2, module, *msg)
 
 
 def error(module, *msg):
