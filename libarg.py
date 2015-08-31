@@ -17,8 +17,9 @@ def REType(formats, rege):
     '''
     class CheckRE():
         def __call__(self, s):
-            if re.match(rege + '$', s):
-                return s
+            m = re.match(rege + '$', s)
+            if m:
+                return m.groups() if m.groups() else s
             msg = '%r does not match the format %r' % (s, formats)
             raise argparse.ArgumentTypeError(msg)
     return CheckRE()

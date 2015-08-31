@@ -7,6 +7,8 @@ import argparse
 import libdpc
 import libpic
 import libarg
+import libbox
+import re
 import sys
 import PIL.ImageColor
 
@@ -90,7 +92,7 @@ def findContentBoxes(image, args):
             boxh = (h - mpI*(boxCount-1)) / boxCount
             b += (boxh + mpI) * i
             d = b + boxh
-        boxes.append((fmts[i], tuple(map(int, (a, b, c, d)))))
+        boxes.append((fmts[i], libpic.intBox((a, b, c, d))))
     return boxes
 
 
@@ -104,9 +106,9 @@ def handle(args):
 
     boxes = findContentBoxes(image, args)
     for i, (f, box) in enumerate(boxes):
+        fn = libbox.getFuncForBoxType(f)
         libdpc.debug('handle', box, 'Subbox', i, 'format', f)
-        image.drw.rectangle(box, (0, 0, 0), (0, 0, 255))
-
+        fn(args, f, image, box)
     image.show()
 
 
@@ -144,12 +146,12 @@ portrait pictures).'''
                             metavar='RATIO', default='2.25',
                             help='inner margin in %% (default %(default)s)',
                             type=libarg.RangeCheck(float, 0, 20)))
+    reformat = r'([tb])((?:%s)+)' % '|'.join(libbox.getBoxTypes())
     mmarg(pgen.add_argument('-f', '--format', dest='format',
-                            default='Tmdc',
+                            default='tmdc',
                             help='format of each page (default %(default)s)',
                             metavar='FORMAT',
-                            type=libarg.REType('[TB][mdc_]{3}',
-                                               r'(?i)[TB][mdc_]{3}')))
+                            type=libarg.REType(reformat, reformat)))
     mmarg(pgen.add_argument('--bgcolor', dest='bgcolor', default='#DEDEDE',
                             help='background color (default %(default)s)',
                             metavar='COLOR',
@@ -160,7 +162,8 @@ portrait pictures).'''
                       help='filename of picture to use',
                       metavar='FILENAME', required=True,
                       type=argparse.FileType('rb'))
-    mmarg(ppic.add_argument('-r', '--ratio', dest='ratio', default='1.5:1.33333',
+    mmarg(ppic.add_argument('-r', '--ratio', dest='ratio',
+                            default='1.5:1.3333333',
                             help='ratio to crop all images to '
                             '(default %(default)s)',
                             metavar='RATIO',
@@ -199,8 +202,10 @@ portrait pictures).'''
     libdpc.VERBOSE = 2 if args.verbose else 1
 
     args.size = tuple(map(int, args.size.split('x')))
-    args.format = args.format.lower()
-    args.format = (args.format[0], tuple(args.format[1:]))
+
+    formatsp = r'(%s)' % '|'.join(libbox.getBoxTypes())
+    formatsp = tuple(filter(None, re.split(formatsp, args.format[1])))
+    args.format = args.format[0], formatsp
 
     handle(args)
 
