@@ -3,6 +3,7 @@
 #
 
 import PIL.ImageDraw
+import libdpc
 
 CENTER = object()
 
@@ -96,12 +97,16 @@ def rotateCCW(image):
     return decorateImage(res)
 
 
-def textDraw(image, box, text, color, font, position=CENTER):
+def textDraw(image, box, text, color, font, position=CENTER, squeezed=False):
     global CENTER
     decorateImage(image)
 
     boxsize = (box[2] - box[0], box[3] - box[1])
-    textsize = image.drw.textsize(text, font)
+    if squeezed:
+        mask, offset = font.getmask2(text)
+        textsize = mask.size
+    else:
+        textsize = image.drw.textsize(text, font)
 
     if type(position) not in (tuple, list):
         pos = [position, position]
@@ -116,17 +121,44 @@ def textDraw(image, box, text, color, font, position=CENTER):
             pos[i] = box[i] + boxsize[i] + pos[i] - textsize[i]
         else:
             pos[i] = box[i]+pos[i]  # go from relative to absolute
+    if squeezed:
+        pos[0] -= offset[0]
+        pos[1] -= offset[1]
 
     image.drw.text(pos, text, font=font, fill=color)
 
 
 def scaleFont(font, newSize):
-    dlfn = font if type(font) == str else font.dlfn
+    dlfn = font if type(font) == str else font.path
     font = PIL.ImageFont.truetype(dlfn, newSize)
-    font.dlfn = dlfn
-    font.dsize = newSize
+    # font.dlfn = dlfn
+    # font.dsize = newSize
     return font
 
 
 def intBox(box):
     return tuple(int(b+.5) for b in box)
+
+
+def fitFontSize(font, text, box, squeezed=False):
+    '''Find largest font where text can be fitted within the box'''
+    if len(box) == 2:
+        w, h = box
+    else:
+        w, h = box[2] - box[0], box[3] - box[1]
+
+    size = 2*h
+    while size > 1:
+        font = scaleFont(font, size)
+        if squeezed:
+            textsize = font.getmask(text).size
+        else:
+            textsize = font.getsize(text)
+        # libdpc.debug('fitFontSize', '==', textsize, 'for fontsize=', font.dsize)
+        if textsize[0] <= w and textsize[1] <= h:
+            break
+        size -= 1
+    libdpc.debug('fitFontSize', 'Scaling', text, 'into', textsize,
+                 '<=', (w,h),
+                 'font.size=',font.size)
+    return font

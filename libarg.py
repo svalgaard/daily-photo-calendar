@@ -7,6 +7,8 @@ import argparse
 import sys
 import os
 import PIL.ImageFont
+import locale
+import datetime
 
 
 def REType(formats, rege):
@@ -114,3 +116,23 @@ def maybeMore(subType, n=2, sep=':'):
         raise ValueError('You should either not use any %r or exactly %d' %
                          (sep, n-1))
     return check
+
+
+def setLocale(loc):
+    if '.' not in loc:
+        try:
+            return locale.setlocale(locale.LC_ALL, (loc, 'UTF-8'))
+        except locale.Error:
+            pass
+
+    msg = 'Unsupported locale %r. Use e.g. da_DK, en_US, etc.' % loc
+    raise argparse.ArgumentTypeError(msg)
+
+
+def dateType(s):
+    try:
+        dt = datetime.datetime.strptime(s, '%Y-%m-%d')
+        return dt.date()
+    except ValueError:
+        msg = 'Date %r does not match the format YYYY-MM-DD' % s
+        raise argparse.ArgumentTypeError(msg)

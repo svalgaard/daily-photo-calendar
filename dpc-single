@@ -11,6 +11,10 @@ import libbox
 import re
 import sys
 import PIL.ImageColor
+import locale
+
+FONT_BOLD = 'Raleway-Bold'
+FONT_REGULAR = 'Raleway-Regular'
 
 
 def addPicture(image, args, goTOP=None):
@@ -113,7 +117,8 @@ def handle(args):
 
 
 def mmarg(arg, **args):
-    assert(arg.type)
+    if not arg.type:
+        arg.type = str
     arg.type = libarg.maybeMore(arg.type, **args)
     arg.mm = True
     return arg
@@ -132,58 +137,131 @@ portrait pictures).'''
                         help='Be more verbose',
                         action='store_true')
 
-    pgen = parser.add_argument_group('General setup')
-    mmarg(pgen.add_argument('-s', '--size', dest='size', default='1200x1050',
+    pgrp = parser.add_argument_group('General setup')
+    mmarg(pgrp.add_argument('--size', dest='size', default='1200x1050',
                             help='size of a page in pixels '
                             '(default %(default)s)',
                             metavar='SIZE',
                             type=libarg.REType('WIDTHxHEIGHT', r'\d+x\d+')))
-    mmarg(pgen.add_argument('--margin-outer', dest='marginOuter',
+    mmarg(pgrp.add_argument('--margin-outer', dest='marginOuter',
                             default='4.5', metavar='RATIO',
                             help='outer margin in %% (default %(default)s)',
                             type=libarg.RangeCheck(float, 0, 40)))
-    mmarg(pgen.add_argument('--margin-inner', dest='marginInner',
+    mmarg(pgrp.add_argument('--margin-inner', dest='marginInner',
                             metavar='RATIO', default='2.25',
                             help='inner margin in %% (default %(default)s)',
                             type=libarg.RangeCheck(float, 0, 20)))
     reformat = r'([tb])((?:%s)+)' % '|'.join(libbox.getBoxTypes())
-    mmarg(pgen.add_argument('-f', '--format', dest='format',
-                            default='tmdc',
+    mmarg(pgrp.add_argument('-f', '--format', dest='format',
+                            default='tmde',
                             help='format of each page (default %(default)s)',
                             metavar='FORMAT',
                             type=libarg.REType(reformat, reformat)))
-    mmarg(pgen.add_argument('--bgcolor', dest='bgcolor', default='#DEDEDE',
+    mmarg(pgrp.add_argument('--bgcolor', dest='bgcolor', default='#DEDEDE',
                             help='background color (default %(default)s)',
                             metavar='COLOR',
                             type=PIL.ImageColor.getrgb))
+    pgrp.add_argument('--locale', dest='locale',
+                      default=locale.getdefaultlocale()[0],
+                      help='Locale to use for dates etc (default %(default)s)',
+                      metavar='LOCALE',
+                      type=libarg.setLocale)
+    pgrp.add_argument('-d', '--date', dest='date', required=True,
+                      help='Date to show', metavar='DATE',
+                      type=libarg.dateType)
 
-    ppic = parser.add_argument_group('Picture')
-    ppic.add_argument('-p', '--picture', dest='imagefd', default=None,
+    pgrp = parser.add_argument_group('Picture')
+    pgrp.add_argument('-p', '--picture', dest='imagefd', default=None,
                       help='filename of picture to use',
                       metavar='FILENAME', required=True,
                       type=argparse.FileType('rb'))
-    mmarg(ppic.add_argument('-r', '--ratio', dest='ratio',
+    mmarg(pgrp.add_argument('-r', '--ratio', dest='ratio',
                             default='1.5:1.3333333',
                             help='ratio to crop all images to '
                             '(default %(default)s)',
                             metavar='RATIO',
                             type=libarg.RangeCheck(float, 0, 10)))
-    ppic.add_argument('--text', dest='text', default='',
+    pgrp.add_argument('--text', dest='text', default='',
                       help='text to show below image (default none)',
                       metavar='TEXT',
                       type=str)
-    mmarg(ppic.add_argument('--text-font', dest='textFont',
-                            default='Raleway-Regular',
+    mmarg(pgrp.add_argument('--text-font', dest='textFont',
+                            default=FONT_REGULAR,
                             help='font for text to show below image '
                             '(default %(default)s)',
                             metavar='FONT',
                             type=libarg.Font))
-    mmarg(ppic.add_argument('--text-color', dest='textColor',
+    mmarg(pgrp.add_argument('--text-color', dest='textColor',
                             default='#000000',
-                            help='color for text to show below image '
+                            help='color of the text to show below image '
                             '(default %(default)s)',
                             metavar='COLOR',
                             type=PIL.ImageColor.getrgb))
+
+    pgrp = parser.add_argument_group('Datebox (d)')
+    mmarg(pgrp.add_argument('--datebox-top', dest='dateboxTop',
+                            default='%A uge %V',
+                            help='datetext to show above '
+                            '(default %(default)s)',
+                            metavar='CONTENT'))
+    mmarg(pgrp.add_argument('--datebox-middle', dest='dateboxMiddle',
+                            default='%e',
+                            help='datetext to show in the middle '
+                            '(default %(default)s)',
+                            metavar='CONTENT'))
+    mmarg(pgrp.add_argument('--datebox-bottom', dest='dateboxBottom',
+                            default='%B %Y',
+                            help='datetext to show below '
+                            '(default %(default)s)',
+                            metavar='CONTENT'))
+    mmarg(pgrp.add_argument('--datebox-color', dest='dateboxColor',
+                            default='#000000',
+                            help='color of the datebox text '
+                            '(default %(default)s)',
+                            metavar='COLOR',
+                            type=PIL.ImageColor.getrgb))
+    mmarg(pgrp.add_argument('--datebox-font', dest='dateboxTopBottomFont',
+                            default=FONT_REGULAR,
+                            help='font for the top/bottom part of the datebox '
+                            '(default %(default)s)',
+                            metavar='FONT',
+                            type=libarg.Font))
+    mmarg(pgrp.add_argument('--datebox-middle-font', dest='dateboxMiddleFont',
+                            default=FONT_BOLD,
+                            help='font for the middle part of the datebox '
+                            '(default %(default)s)',
+                            metavar='FONT',
+                            type=libarg.Font))
+    mmarg(pgrp.add_argument('--datebox-middle-size', dest='dateboxMiddleSize',
+                            default=60,
+                            help='height of datebox in %% to use for '
+                            'date-middle (default %(default)s)',
+                            metavar='SIZE',
+                            type=libarg.RangeCheck(float, 0, 100)))
+
+    pgrp = parser.add_argument_group('Events (e)')
+    pgrp.add_argument('--event-file', dest='eventboxTop',
+                      default=None,
+                      help='eventfile to use '
+                      '(default %(default)s)',
+                      metavar='FILE')
+    mmarg(pgrp.add_argument('--eventbox-title', dest='eventboxTitle',
+                            default='%A:',
+                            help='datetext to show above the events '
+                            '(default %(default)s)',
+                            metavar='CONTENT'))
+    mmarg(pgrp.add_argument('--eventbox-title-font', dest='eventboxTitleFont',
+                            default=FONT_BOLD,
+                            help='font for the title of the event box '
+                            '(default %(default)s)',
+                            metavar='FONT',
+                            type=libarg.Font))
+    mmarg(pgrp.add_argument('--eventbox-font', dest='eventboxFont',
+                            default=FONT_REGULAR,
+                            help='font for the middle part of the event box '
+                            '(default %(default)s)',
+                            metavar='FONT',
+                            type=libarg.Font))
 
     args = parser.parse_args()
 
