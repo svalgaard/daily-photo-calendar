@@ -104,7 +104,7 @@ def deMore(args, n):
             args.__dict__[k] = v[n]
 
 
-def maybeMore(subType, n=2, sep=':'):
+def maybeMore(subType, n=2, sep='\t'):
     def check(s):
         sp = s.split(sep)
         if len(sp) == 1:

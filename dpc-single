@@ -127,10 +127,11 @@ def mmarg(arg, **args):
 def main():
     desc = '''Create a single calendar page.
 
-In all cases where it makes sense, unless otherwise noted all options
-can be supplied with two suboptions for landscape resp. portrait images,
-e.g., --margin-inner 4:5 (meaning 4% for landscape pictures and 5% for
-portrait pictures).'''
+In all cases where it makes sense and unless otherwise noted, all
+options can be supplied with two suboptions for landscape
+resp. portrait images. The two options should be separated with \\t
+e.g., --margin-inner 4\\t5 (meaning 4% for landscape pictures and 5%
+for portrait pictures).'''
     parser = argparse.ArgumentParser(description=desc)
 
     parser.add_argument('-v', '--verbose', dest='verbose', default=False,
@@ -176,7 +177,7 @@ portrait pictures).'''
                       metavar='FILENAME', required=True,
                       type=argparse.FileType('rb'))
     mmarg(pgrp.add_argument('-r', '--ratio', dest='ratio',
-                            default='1.5:1.3333333',
+                            default='1.5\t1.3333333',
                             help='ratio to crop all images to '
                             '(default %(default)s)',
                             metavar='RATIO',
@@ -240,10 +241,12 @@ portrait pictures).'''
                             type=libarg.RangeCheck(float, 0, 100)))
 
     pgrp = parser.add_argument_group('Events (e)')
-    pgrp.add_argument('--event-file', dest='eventboxTop',
-                      default=None,
-                      help='eventfile to use '
+    pgrp.add_argument('-e', '--event-file', dest='eventboxTop',
+                      default=None, action='append',
+                      help='eventfile to use - use several times '
+                      'to use multiple files '
                       '(default %(default)s)',
+                      type=argparse.FileType('r'),
                       metavar='FILE')
     mmarg(pgrp.add_argument('--eventbox-title', dest='eventboxTitle',
                             default='%A:',
