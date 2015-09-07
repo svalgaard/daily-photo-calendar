@@ -3,7 +3,7 @@
 #
 
 import PIL.ImageDraw
-import libdpc
+from . import log
 
 CENTER = object()
 
@@ -154,11 +154,11 @@ def fitFontSize(font, text, box, squeezed=False):
             textsize = font.getmask(text).size
         else:
             textsize = font.getsize(text)
-        # libdpc.debug('fitFontSize', '==', textsize, 'for fontsize=', font.dsize)
+        # log.debug('fitFontSize', '==', textsize, 'for fontsize=', font.dsize)
         if textsize[0] <= w and textsize[1] <= h:
             break
         size -= 1
-    libdpc.debug('fitFontSize', 'Scaling', text, 'into', textsize,
-                 '<=', (w,h),
-                 'font.size=',font.size)
+    log.debug('fitFontSize', 'Scaling', text, 'into', textsize,
+              '<=', (w, h),
+              'font.size=', font.size)
     return font

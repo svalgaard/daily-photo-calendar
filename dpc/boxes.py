@@ -1,9 +1,9 @@
 #
-#
+# -*- encoding: utf-8 -*-
 #
 
-import libpic
-import libdpc
+from . import log
+from . import pics
 
 BOX_TYPES = {}
 
@@ -46,24 +46,24 @@ def datebox(args, f, image, box):
     # determine text to write
     texts = [args.dateboxTop, args.dateboxMiddle, args.dateboxBottom]
     texts = tuple(map(args.date.strftime, texts))
-    libdpc.debug('datebox', 'texts to insert', texts)
+    log.debug('datebox', 'texts to insert', texts)
 
     # find font sizes
     font = args.dateboxTopBottomFont
-    font0 = libpic.fitFontSize(font, texts[0], (w, sz))
-    font1 = libpic.fitFontSize(font, texts[2], (w, sz))
+    font0 = pics.fitFontSize(font, texts[0], (w, sz))
+    font1 = pics.fitFontSize(font, texts[2], (w, sz))
     fontS = font0 if font0.size <= font1.size else font1
-    fontC = libpic.fitFontSize(args.dateboxMiddleFont, texts[1], cbox, True)
+    fontC = pics.fitFontSize(args.dateboxMiddleFont, texts[1], cbox, True)
 
     # color
     color = args.dateboxColor
 
-    libpic.textDraw(image, (x0, y0, x1, y0+sz), texts[0], color, fontS,
-                    (libpic.CENTER, 0))
-    libpic.textDraw(image, cbox, texts[1], color, fontC,
-                    libpic.CENTER, True)
-    libpic.textDraw(image, (x0, y1-sz, x1, y1), texts[2], color, fontS,
-                    (libpic.CENTER, 0))
+    pics.textDraw(image, (x0, y0, x1, y0+sz), texts[0], color, fontS,
+                  (pics.CENTER, 0))
+    pics.textDraw(image, cbox, texts[1], color, fontC,
+                  pics.CENTER, True)
+    pics.textDraw(image, (x0, y1-sz, x1, y1), texts[2], color, fontS,
+                  (pics.CENTER, 0))
 
 
 @boxType('e')

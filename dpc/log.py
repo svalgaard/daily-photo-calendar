@@ -2,8 +2,8 @@
 # -*- encoding: utf-8 -*-
 #
 
-import sys
 
+import sys
 
 VERBOSE = 1
 
