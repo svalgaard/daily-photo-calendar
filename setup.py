@@ -22,11 +22,11 @@ setup(name='dpc',
       license='MIT',
       packages=['dpc'],
       zip_safe=True,
-      requires=["Pillow"],
+      requires=['Pillow'],
+      scripts=['dpc-single'],
       classifiers=[
           'Development Status :: 4 - Beta',
           'Intended Audience :: End Users/Desktop',
           'Programming Language :: Python :: 3',
           'License :: OSI Approved :: MIT License',
-          
       ])
