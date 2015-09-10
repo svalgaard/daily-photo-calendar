@@ -69,12 +69,18 @@ def fontCheck(name):
         _allfonts = {}
         for dn in ('.',
                    sys.path[0],
+                   '/usr/share/fonts/truetype/'
+                   '/System/Library/Fonts/',
                    '/Library/Fonts/'):
+            if not os.path.isdir(dn):
+                continue
             for dirpath, dirnames, filenames in os.walk(dn):
                 for fn in filenames:
                     lfn = os.path.join(dirpath, fn)
                     key, ext = os.path.splitext(fn.lower().replace(' ', '_'))
-                    if ext == '.ttf' and key not in _allfonts:
+                    if key in _allfonts:
+                        continue
+                    if ext in ['.ttf', '.ttc']:
                         _allfonts[key] = lfn
 
     if ':' in name:

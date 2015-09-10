@@ -34,11 +34,6 @@ def noop(args, f, image, box):
     pass
 
 
-@boxType('m')
-def month(args, f, image, box):
-    image.drw.rectangle(box, (0, 0, 0), (0, 0, 255))
-
-
 @boxType('d')
 def datebox(args, f, image, box):
     x0, y0, x1, y1 = box
@@ -114,3 +109,66 @@ def shortDateFormat():
     fmt = fmt.replace('%Y', '').replace('%y', '')
     fmt = fmt.strip('/-.')
     return fmt
+
+
+@boxType('m')
+def month(args, f, image, box):
+    '''Draw a calendar. Always 6 weeks + names of days'''
+    x0, y0, x1, y1 = box
+    w, h = x1 - x0, y1 - y0
+
+    w0 = int(w//7)
+    h0 = int(h//6.7)
+    ht = h - 6*h0
+
+    # Which month are we looking at?
+    day0 = args.date.replace(day=1)
+    while day0.weekday() != args.monthboxFirstDay:
+        day0 -= datetime.timedelta(1)
+
+    # "Title"
+    days = list((day0 + datetime.timedelta(i)).strftime('%a')
+                for i in range(7))
+    font = pics.fitFontSize(args.monthboxTitleFont, days, (w0-4, ht-4))
+    for i in range(7):
+        bx = (x0 + w0*i, y0, x0 + w0*(i+1), y0+ht)
+        image.drw.rectangle(bx,
+                            args.monthboxTitleBgColor,
+                            args.monthboxTitleBorderColor)
+        pics.textDraw(image, bx, days[i],
+                      args.monthboxTitleColor, font)
+
+    font = pics.fitFontSize(args.monthboxFont, '88', (w0-8, h0-8))
+    evs = args.events[:]
+    for week in range(6):
+        for i in range(7):
+            day = day0+datetime.timedelta(week*7+i)
+
+            # determine whether today should be marked
+            markAsDayOff = False
+            while evs[0].date < day:
+                del evs[0]
+            while evs[0].date == day:
+                if evs[0].markAsDayOff():
+                    markAsDayOff = True
+                del evs[0]
+
+            bx = (x0 + w0*i,     y0+ht+h0*week,
+                  x0 + w0*(i+1), y0+ht+h0*(week+1))
+            if day.month != args.date.month:
+                color = args.monthboxOthermonthColor
+                bgcolor = args.monthboxOthermonthBgColor
+            elif day == args.date:
+                color = args.monthboxTodayColor
+                bgcolor = args.monthboxTodayBgColor
+            elif day.weekday() in args.monthboxDayoff or markAsDayOff:
+                color = args.monthboxDayoffColor
+                bgcolor = args.monthboxDayoffBgColor
+            else:
+                color = args.monthboxDefaultColor
+                bgcolor = args.monthboxDefaultBgColor
+
+            image.drw.rectangle(bx,
+                                bgcolor,
+                                None and args.monthboxBorderColor)
+            pics.textDraw(image, bx, str(day.day), color, font)

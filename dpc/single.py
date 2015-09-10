@@ -15,8 +15,11 @@ from . import argp
 from . import boxes
 from . import events
 
-FONT_BOLD = 'Raleway-Bold'
-FONT_REGULAR = 'Raleway-Regular'
+# FONT_BOLD = 'Raleway-Bold'
+# FONT_REGULAR = 'Raleway-Regular'
+
+FONT_BOLD = 'Tahoma_Bold'
+FONT_REGULAR = 'Tahoma'
 
 
 def addPicture(image, args, goTOP=None):
@@ -161,7 +164,7 @@ for portrait pictures).'''
                             help='format of each page (default %(default)s)',
                             metavar='FORMAT',
                             type=argp.RECheck(reformat, reformat)))
-    mmarg(pgrp.add_argument('--bgcolor', dest='bgcolor', default='#DEDEDE',
+    mmarg(pgrp.add_argument('--bgcolor', dest='bgcolor', default='#FFFFFF',
                             help='background color (default %(default)s)',
                             metavar='COLOR',
                             type=PIL.ImageColor.getrgb))
@@ -288,6 +291,76 @@ for portrait pictures).'''
                             '(default %(default)s)',
                             metavar='FONT',
                             type=argp.fontCheck))
+
+    pgrp = parser.add_argument_group('Monthly calendar (m)',
+                                     'Also see --event-file above.')
+    pgrp.add_argument('--monthbox-firstweekday',
+                      dest='monthboxFirstDay', default=0,
+                      help='first day of week. 0 is Monday, 6 is Sunday '
+                      '(default %(default)s)',
+                      metavar='DAY',
+                      type=argp.rangeCheck(int, 0, 6))
+    pgrp.add_argument('--monthbox-dayoff',
+                      dest='monthboxDayoff', default=[5, 6],
+                      help='days off (marked as "red"). 0 is Monday, '
+                      '6 is Sunday. Use e.g., -5 to unmark Saturday. '
+                      '(default %(default)s)',
+                      metavar='DAY', action='append',
+                      type=argp.rangeCheck(int, -6, 6))
+    mmarg(pgrp.add_argument('--monthbox-font', dest='monthboxFont',
+                            default=FONT_REGULAR,
+                            help='font for the text in the month box '
+                            '(default %(default)s)',
+                            metavar='FONT',
+                            type=argp.fontCheck))
+    mmarg(pgrp.add_argument('--monthbox-title-font', dest='monthboxTitleFont',
+                            default=FONT_BOLD,
+                            help='font for the title text in the month box '
+                            '(default %(default)s)',
+                            metavar='FONT',
+                            type=argp.fontCheck))
+
+    mmarg(pgrp.add_argument('--monthbox-border-color',
+                            dest='monthboxBorderColor',
+                            default='#000000',
+                            help='default border color around boxes '
+                            '(default %(default)s)',
+                            metavar='COLOR',
+                            type=PIL.ImageColor.getrgb))
+
+    mmarg(pgrp.add_argument('--monthbox-title-border-color',
+                            dest='monthboxTitleBorderColor',
+                            default='#FFFFFF',
+                            help='border color around the title boxes '
+                            '(default %(default)s)',
+                            metavar='COLOR',
+                            type=PIL.ImageColor.getrgb))
+
+    colors = [
+        ('title',      '#666666', '#FFFFFF', 'monthbox title (MON...)'),
+        ('default',    '#666666', '#C2C2C2', 'default date'),
+        ('today',      '#F3F3F3', '#598B94', 'today\'s date'),
+        ('dayoff',     '#969696', '#C2C2C2', 'a day of'),
+        ('othermonth', '#C8C5BE', '#F3F3F3', 'a day from other months'),
+        ]
+
+    for (key, c, bgc, desc) in colors:
+        tkey = key.title()
+        mmarg(pgrp.add_argument('--monthbox-%s-color' % key,
+                                dest='monthbox%sColor' % tkey,
+                                default=c,
+                                help='text color of the %s '
+                                '(default %%(default)s)' % desc,
+                                metavar='COLOR',
+                                type=PIL.ImageColor.getrgb))
+        mmarg(pgrp.add_argument('--monthbox-%s-bgcolor' % key,
+                                dest='monthbox%sBgColor' % tkey,
+                                default=bgc,
+                                help='background color of the %s '
+                                '(default %%(default)s)' % desc,
+                                metavar='COLOR',
+                                type=PIL.ImageColor.getrgb))
+
     args = parser.parse_args()
 
     try:

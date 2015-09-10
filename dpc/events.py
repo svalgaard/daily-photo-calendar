@@ -80,9 +80,14 @@ class Event:
     def between(self, start, end):
         return start <= self.date <= end
 
+    def markAsDayOff(self):
+        return 'm' in self.tp
+
     def __lt__(self, other):
         return self.date < other.date
 
+    def __repr__(self):
+        return 'Event(%r, %r, %r)' % (self.date, self.tp, self.text)
 
 def readEventFile(fd):
     events = []
