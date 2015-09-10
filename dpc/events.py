@@ -71,6 +71,19 @@ From http://code.activestate.com/recipes/576517/'''
     return datetime.date(year, month, day)
 
 
+class Event:
+    def __init__(self, date, tp, text):
+        self.date = date
+        self.tp = tp
+        self.text = text
+
+    def between(self, start, end):
+        return start <= self.date <= end
+
+    def __lt__(self, other):
+        return self.date < other.date
+
+
 def readEventFile(fd):
     events = []
     for i, line in enumerate(fd):
@@ -123,7 +136,7 @@ def readEventFile(fd):
 
             for year in range(MINYEAR, MAXYEAR+1):
                 date = easter(year) + delta
-                events.append((date, tp, text))
+                events.append(Event(date, tp, text))
             continue
 
         # normal date
@@ -139,12 +152,12 @@ def readEventFile(fd):
                 tp += '='
             for year in range(MINYEAR, MAXYEAR+1):
                 date = dt.replace(year=year)
-                events.append((date, tp, text))
+                events.append(Event(date, tp, text))
             continue
 
         # regular date, e.g., birthday
         if '=' in tp:
-            events.append((dt, tp, text))
+            events.append(Event(dt, tp, text))
             continue
 
         for year in range(max(dt.year, MINYEAR), MAXYEAR+1):
@@ -152,7 +165,7 @@ def readEventFile(fd):
             txt = text
             if 'd' in tp:
                 txt += ' (%s)' % yearText(year-dt.year)
-            events.append((date, tp, txt))
+            events.append(Event(date, tp, txt))
         continue
 
     events.sort()

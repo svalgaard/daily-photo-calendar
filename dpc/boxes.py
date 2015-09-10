@@ -83,21 +83,17 @@ def events(args, f, image, box):
                   (0, pics.CENTER), False, True)
 
     # Find applicable events
-    evs = []
-    for ev in args.events:
-        if ev[0] < args.date:
-            continue
-        if args.date + datetime.timedelta(days=args.eventboxRange) < ev[0]:
-            continue
-        evs.append(ev)
+    end = args.date + datetime.timedelta(days=args.eventboxRange)
+    evs = list(ev for ev in args.events if ev.between(args.date, end))
+
     mx = h//sz
     evs = evs[:mx]
     if not evs:
         log.debug('events', 'NO EVENTS TO SHOW')
     texts = []
     for i, ev in enumerate(evs):
-        dt = ev[0].strftime(shortDateFormat())
-        text = '%s: %s' % (dt, ev[2])
+        dt = ev.date.strftime(shortDateFormat())
+        text = '%s: %s' % (dt, ev.text)
         log.debug('events', '%r ==> %s' % (ev, text))
         texts.append(text)
     font = pics.fitFontSize(args.eventboxFont, texts, (w, sz))
