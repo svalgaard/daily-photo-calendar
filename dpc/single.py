@@ -160,7 +160,7 @@ for portrait pictures).'''
                             type=argp.rangeCheck(float, 0, 20)))
     reformat = r'([tb])((?:%s)+)' % '|'.join(boxes.getBoxTypes())
     mmarg(pgrp.add_argument('-f', '--format', dest='format',
-                            default='tmde',
+                            default='tmde~tdme',
                             help='format of each page (default %(default)s)',
                             metavar='FORMAT',
                             type=argp.RECheck(reformat, reformat)))
