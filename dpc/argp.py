@@ -1,5 +1,7 @@
+# -*- encoding: utf-8 -*-
 #
-# Misc type checking functions for argparse
+# Misc extensions for types for argparse
+#
 #
 
 import re
@@ -11,46 +13,55 @@ import locale
 import datetime
 
 
-def REType(formats, rege):
-    '''Factory for creating object types matched against a regular
-    expression.  This can be used for type= arguments to the
-    ArgumentParser add_argument() method.  formats is used to show a
-    human-readable version of the regular expression.
+def RECheck(formats, rege, func=None):
+    '''Factory for checking argparse options against a regular expression.
+    This can be used for type= arguments to the ArgumentParser
+    add_argument() method.
+    formats is used to show a human-readable version of the regular
+    expression for error messages.
+
+    rege is the regular expression to match against ($ is added at the
+    end). If the expression contains groups, the groups are returned,
+    otherwise, the options itself is returned.
+
+    func is (optionally) called on the option to get the final result
+
+    type=argp.REType('WIDTHxHEIGHT', r'(\d+)x(\d+)', lambda x: map(int, x))
+
     '''
-    class CheckRE():
-        def __call__(self, s):
-            m = re.match(rege + '$', s)
-            if m:
-                return m.groups() if m.groups() else s
-            msg = '%r does not match the format %r' % (s, formats)
+    def check(s):
+        m = re.match(rege + '$', s)
+        if m:
+            s = m.groups() if m.groups() else s
+            return func(s) if func else s
+        msg = '%r does not match the format %r' % (s, formats)
+        raise argparse.ArgumentTypeError(msg)
+    return check
+
+
+def rangeCheck(pre, nmin, nmax):
+    '''Factory for checking argparse options for being between the values
+    nmin and name.  This can be used for type= arguments to the
+    ArgumentParser.
+    '''
+    def check(s):
+        try:
+            s = pre(s)
+        except ValueError:
+            msg = '%r is not valid for the type %s'
+            msg %= (s, pre.__doc__.split('(')[0])
             raise argparse.ArgumentTypeError(msg)
-    return CheckRE()
-
-
-def RangeCheck(type, nmin, nmax):
-    '''Factory for creating object types matched against a regular
-    expression.  This can be used for type= arguments to the
-    ArgumentParser add_argument() method.
-    '''
-    class CheckRange():
-        def __call__(self, s):
-            try:
-                s = type(s)
-            except ValueError:
-                msg = '%r is not valid for the type %s'
-                msg %= (s, type.__doc__.split('(')[0])
-                raise argparse.ArgumentTypeError(msg)
-            if s < nmin or nmax < s:
-                msg = '%r is not in the range %s to %s'
-                msg %= (s, nmin, nmax)
-                raise argparse.ArgumentTypeError(msg)
-            return s
-    return CheckRange()
+        if s < nmin or nmax < s:
+            msg = '%r is not in the range %s to %s'
+            msg %= (s, nmin, nmax)
+            raise argparse.ArgumentTypeError(msg)
+        return s
+    return check
 
 _allfonts = None
 
 
-def Font(name):
+def fontCheck(name):
     '''Check that name is a valid PIL/Pillow font'''
     global _allfonts
 
@@ -104,7 +115,7 @@ def deMore(args, n):
             args.__dict__[k] = v[n]
 
 
-def maybeMore(subType, n=2, sep='\t'):
+def maybeMore(subType, n=2, sep='~'):
     def check(s):
         sp = s.split(sep)
         if len(sp) == 1:
@@ -118,7 +129,7 @@ def maybeMore(subType, n=2, sep='\t'):
     return check
 
 
-def setLocale(loc):
+def localeCheckSet(loc):
     if '.' not in loc:
         try:
             return locale.setlocale(locale.LC_ALL, (loc, 'UTF-8'))
@@ -129,7 +140,7 @@ def setLocale(loc):
     raise argparse.ArgumentTypeError(msg)
 
 
-def dateType(s):
+def dateCheck(s):
     try:
         dt = datetime.datetime.strptime(s, '%Y-%m-%d')
         return dt.date()

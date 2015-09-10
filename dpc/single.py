@@ -13,6 +13,7 @@ from . import log
 from . import pics
 from . import argp
 from . import boxes
+from . import events
 
 FONT_BOLD = 'Raleway-Bold'
 FONT_REGULAR = 'Raleway-Regular'
@@ -130,8 +131,8 @@ def main():
 
 In all cases where it makes sense and unless otherwise noted, all
 options can be supplied with two suboptions for landscape
-resp. portrait images. The two options should be separated with \\t
-e.g., --margin-inner 4\\t5 (meaning 4% for landscape pictures and 5%
+resp. portrait images. The two options should be separated with ~
+e.g., --margin-inner 4~5 (meaning 4% for landscape pictures and 5%
 for portrait pictures).'''
     parser = argparse.ArgumentParser(description=desc)
 
@@ -144,21 +145,22 @@ for portrait pictures).'''
                             help='size of a page in pixels '
                             '(default %(default)s)',
                             metavar='SIZE',
-                            type=argp.REType('WIDTHxHEIGHT', r'\d+x\d+')))
+                            type=argp.RECheck('WIDTHxHEIGHT', r'(\d+)x(\d+)',
+                                              lambda x: tuple(map(int, x)))))
     mmarg(pgrp.add_argument('--margin-outer', dest='marginOuter',
                             default='4.5', metavar='RATIO',
                             help='outer margin in %% (default %(default)s)',
-                            type=argp.RangeCheck(float, 0, 40)))
+                            type=argp.rangeCheck(float, 0, 40)))
     mmarg(pgrp.add_argument('--margin-inner', dest='marginInner',
                             metavar='RATIO', default='2.25',
                             help='inner margin in %% (default %(default)s)',
-                            type=argp.RangeCheck(float, 0, 20)))
+                            type=argp.rangeCheck(float, 0, 20)))
     reformat = r'([tb])((?:%s)+)' % '|'.join(boxes.getBoxTypes())
     mmarg(pgrp.add_argument('-f', '--format', dest='format',
                             default='tmde',
                             help='format of each page (default %(default)s)',
                             metavar='FORMAT',
-                            type=argp.REType(reformat, reformat)))
+                            type=argp.RECheck(reformat, reformat)))
     mmarg(pgrp.add_argument('--bgcolor', dest='bgcolor', default='#DEDEDE',
                             help='background color (default %(default)s)',
                             metavar='COLOR',
@@ -167,10 +169,10 @@ for portrait pictures).'''
                       default=locale.getdefaultlocale()[0],
                       help='Locale to use for dates etc (default %(default)s)',
                       metavar='LOCALE',
-                      type=argp.setLocale)
+                      type=argp.localeCheckSet)
     pgrp.add_argument('-d', '--date', dest='date', required=True,
                       help='Date to show', metavar='DATE',
-                      type=argp.dateType)
+                      type=argp.dateCheck)
 
     pgrp = parser.add_argument_group('Picture')
     pgrp.add_argument('-p', '--picture', dest='imagefd', default=None,
@@ -178,11 +180,11 @@ for portrait pictures).'''
                       metavar='FILENAME', required=True,
                       type=argparse.FileType('rb'))
     mmarg(pgrp.add_argument('-r', '--ratio', dest='ratio',
-                            default='1.5\t1.3333333',
+                            default='1.5~1.3333333',
                             help='ratio to crop all images to '
                             '(default %(default)s)',
                             metavar='RATIO',
-                            type=argp.RangeCheck(float, 0, 10)))
+                            type=argp.rangeCheck(float, 0, 10)))
     pgrp.add_argument('--text', dest='text', default='',
                       help='text to show below image (default none)',
                       metavar='TEXT',
@@ -192,7 +194,7 @@ for portrait pictures).'''
                             help='font for text to show below image '
                             '(default %(default)s)',
                             metavar='FONT',
-                            type=argp.Font))
+                            type=argp.fontCheck))
     mmarg(pgrp.add_argument('--text-color', dest='textColor',
                             default='#000000',
                             help='color of the text to show below image '
@@ -227,30 +229,37 @@ for portrait pictures).'''
                             help='font for the top/bottom part of the datebox '
                             '(default %(default)s)',
                             metavar='FONT',
-                            type=argp.Font))
+                            type=argp.fontCheck))
     mmarg(pgrp.add_argument('--datebox-middle-font', dest='dateboxMiddleFont',
                             default=FONT_BOLD,
                             help='font for the middle part of the datebox '
                             '(default %(default)s)',
                             metavar='FONT',
-                            type=argp.Font))
-    mmarg(pgrp.add_argument('--datebox-middle-size', dest='dateboxMiddleSize',
-                            default=60,
-                            help='height of datebox in %% to use for '
-                            'date-middle (default %(default)s)',
+                            type=argp.fontCheck))
+    mmarg(pgrp.add_argument('--datebox-top-size', dest='dateboxTopSize',
+                            default=20,
+                            help='height of datebox in %% to use for each of'
+                            'date-top and date-bottom (default %(default)s)',
                             metavar='SIZE',
-                            type=argp.RangeCheck(float, 0, 100)))
+                            type=argp.rangeCheck(float, 1, 49)))
 
     pgrp = parser.add_argument_group('Events (e)')
-    pgrp.add_argument('-e', '--event-file', dest='eventboxTop',
+    pgrp.add_argument('-e', '--event-file', dest='events',
                       default=None, action='append',
                       help='eventfile to use - use several times '
                       'to use multiple files '
                       '(default %(default)s)',
                       type=argparse.FileType('r'),
                       metavar='FILE')
+    mmarg(pgrp.add_argument('--eventbox-range', dest='eventboxRange',
+                            default=14,
+                            help='maximum number of days in the future for '
+                            'shown events '
+                            '(default %(default)s)',
+                            metavar='DAYS',
+                            type=argp.rangeCheck(int, 0, 365)))
     mmarg(pgrp.add_argument('--eventbox-title', dest='eventboxTitle',
-                            default='%A:',
+                            default='%B:',
                             help='datetext to show above the events '
                             '(default %(default)s)',
                             metavar='CONTENT'))
@@ -259,18 +268,30 @@ for portrait pictures).'''
                             help='font for the title of the event box '
                             '(default %(default)s)',
                             metavar='FONT',
-                            type=argp.Font))
+                            type=argp.fontCheck))
+    mmarg(pgrp.add_argument('--eventbox-title-size', dest='eventboxTitleSize',
+                            default=15,
+                            help='height of eventbox in %% to use for '
+                            'the title (default %(default)s)',
+                            metavar='SIZE',
+                            type=argp.rangeCheck(float, 1, 49)))
+    mmarg(pgrp.add_argument('--eventbox-title-color',
+                            dest='eventboxTitleColor',
+                            default='#000000',
+                            help='color of the eventbox title '
+                            '(default %(default)s)',
+                            metavar='COLOR',
+                            type=PIL.ImageColor.getrgb))
     mmarg(pgrp.add_argument('--eventbox-font', dest='eventboxFont',
                             default=FONT_REGULAR,
-                            help='font for the middle part of the event box '
+                            help='font for the main text in the event box '
                             '(default %(default)s)',
                             metavar='FONT',
-                            type=argp.Font))
-
+                            type=argp.fontCheck))
     args = parser.parse_args()
 
     try:
-        # The file has already been opened
+        # The file itself has already been opened
         args.image = pics.decorateImage(PIL.Image.open(args.imagefd))
     except IOError:
         log.error('main', '%r does not contain valid image data' %
@@ -280,10 +301,15 @@ for portrait pictures).'''
     # use options depending on whether it's a landscape or portrait image
     argp.deMore(args, 0 if args.image.isLandscape() else 1)
 
+    # Read contents of all events files
+    evs = []
+    for efd in (args.events or []):
+        evs += events.readEventFile(efd)
+    evs.sort()
+    args.events = list(evs)
+
     # Now check some of options
     log.VERBOSE = 2 if args.verbose else 1
-
-    args.size = tuple(map(int, args.size.split('x')))
 
     formatsp = r'(%s)' % '|'.join(boxes.getBoxTypes())
     formatsp = tuple(filter(None, re.split(formatsp, args.format[1])))

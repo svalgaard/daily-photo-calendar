@@ -2,6 +2,9 @@
 # -*- encoding: utf-8 -*-
 #
 
+import datetime
+import locale
+
 from . import log
 from . import pics
 
@@ -40,7 +43,7 @@ def month(args, f, image, box):
 def datebox(args, f, image, box):
     x0, y0, x1, y1 = box
     w, h = x1 - x0, y1 - y0
-    sz = int((100-args.dateboxMiddleSize)/200 * h) - 4
+    sz = int(args.dateboxTopSize / 100 * h)
     cbox = (x0, y0+sz+2, x1, y1-sz-2)
 
     # determine text to write
@@ -68,4 +71,50 @@ def datebox(args, f, image, box):
 
 @boxType('e')
 def events(args, f, image, box):
-    image.drw.rectangle(box, (0, 255, 0), (0, 0, 255))
+    x0, y0, x1, y1 = box
+    w, h = x1 - x0, y1 - y0
+    sz = int(args.eventboxTitleSize / 100 * h)
+
+    # Title
+    title = args.date.strftime(args.eventboxTitle)
+    tbox = (x0, y0, x1, y0+sz)
+    pics.textDraw(image, tbox, title, args.eventboxTitleColor,
+                  args.eventboxTitleFont,
+                  (0, pics.CENTER), False, True)
+
+    # Find applicable events
+    evs = []
+    for ev in args.events:
+        if ev[0] < args.date:
+            continue
+        if args.date + datetime.timedelta(days=args.eventboxRange) < ev[0]:
+            continue
+        evs.append(ev)
+    mx = h//sz
+    evs = evs[:mx]
+    if not evs:
+        log.debug('events', 'NO EVENTS TO SHOW')
+    texts = []
+    for i, ev in enumerate(evs):
+        dt = ev[0].strftime(shortDateFormat())
+        text = '%s: %s' % (dt, ev[2])
+        log.debug('events', '%r ==> %s' % (ev, text))
+        texts.append(text)
+    font = pics.fitFontSize(args.eventboxFont, texts, (w, sz))
+    for i, text in enumerate(texts):
+        ebox = (x0, y0+sz*(i+1), x1, y0+sz*(i+2))
+        pics.textDraw(image, ebox, text,
+                      args.eventboxTitleColor, font,
+                      (0, pics.CENTER))
+
+    # fixme
+    # image.drw.rectangle(box, (0, 255, 0), (0, 0, 255))
+
+
+def shortDateFormat():
+    '''Return short date format for any locale - this probably breaks for some
+    locales'''
+    fmt = locale.nl_langinfo(locale.D_FMT)
+    fmt = fmt.replace('%Y', '').replace('%y', '')
+    fmt = fmt.strip('/-.')
+    return fmt

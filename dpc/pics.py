@@ -97,9 +97,13 @@ def rotateCCW(image):
     return decorateImage(res)
 
 
-def textDraw(image, box, text, color, font, position=CENTER, squeezed=False):
+def textDraw(image, box, text, color, font, position=CENTER, squeezed=False,
+             fitFont=False):
     global CENTER
     decorateImage(image)
+
+    if fitFont:
+        font = fitFontSize(font, text, box, squeezed)
 
     boxsize = (box[2] - box[0], box[3] - box[1])
     if squeezed:
@@ -141,23 +145,31 @@ def intBox(box):
 
 
 def fitFontSize(font, text, box, squeezed=False):
-    '''Find largest font where text can be fitted within the box'''
+    '''Find largest font where text can be fitted within the box.
+    Text can be a list/tuple of texts, in which case the largest font
+    that can fit all texts one a the time is used'''
     if len(box) == 2:
         w, h = box
     else:
         w, h = box[2] - box[0], box[3] - box[1]
 
+    if type(text) == str:
+        ttext = [text]
+    else:
+        ttext = text[:]
+
     size = 2*h
-    while size > 1:
+    while size > 1 and ttext:
         font = scaleFont(font, size)
         if squeezed:
-            textsize = font.getmask(text).size
+            textsize = font.getmask(ttext[0]).size
         else:
-            textsize = font.getsize(text)
+            textsize = font.getsize(ttext[0])
         # log.debug('fitFontSize', '==', textsize, 'for fontsize=', font.dsize)
         if textsize[0] <= w and textsize[1] <= h:
-            break
-        size -= 1
+            del ttext[0]
+        else:
+            size -= 1
     log.debug('fitFontSize', 'Scaling', text, 'into', textsize,
               '<=', (w, h),
               'font.size=', font.size)
