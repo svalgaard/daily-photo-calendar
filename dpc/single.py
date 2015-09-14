@@ -8,6 +8,7 @@ import re
 import sys
 import PIL.ImageColor
 import locale
+import os
 
 from . import log
 from . import pics
@@ -113,7 +114,16 @@ def handle(args):
         fn = boxes.getFuncForBoxType(f)
         log.debug('handle', cbox, 'Subbox', i, 'format', f)
         fn(args, f, image, cbox)
-    image.show()
+
+    if args.outfn:
+        dn = os.path.dirname(args.outfn)
+        if not os.path.isdir(dn):
+            log.debug('handle', 'mkdir', dn)
+            os.makedirs(dn)
+        log.debug('handle', 'saving result in', args.outfn)
+        image.save(args.outfn)
+    if args.show:
+        image.show()
 
 
 def mmarg(arg, **args):
@@ -178,6 +188,17 @@ for portrait pictures).'''
                       'must use this option before specifying any fonts '
                       '(default %s)' % ', '.join(argp.FONT_DNS),
                       metavar='FONTDIR')
+
+    pgrp = parser.add_argument_group('Output')
+    pgrp.add_argument('-o', '--output', dest='outfn', default=None,
+                      help='filename of output file',
+                      metavar='FILENAME')
+    pgrp.add_argument('--skip-if-output-exists', dest='skipIfExists',
+                      help='do nothing if the output file already exists '
+                      'and is a valid image file',
+                      action='store_true')
+    pgrp.add_argument('--show', dest='show', action='store_true',
+                      help='Show result')
 
     pgrp = parser.add_argument_group('Picture')
     pgrp.add_argument('-p', '--picture', dest='imagefd', default=None,
@@ -389,6 +410,23 @@ for portrait pictures).'''
     formatsp = r'(%s)' % '|'.join(boxes.getBoxTypes())
     formatsp = tuple(filter(None, re.split(formatsp, args.format[1])))
     args.format = args.format[0], formatsp
+
+    # either --output or --show is required
+    if not (args.outfn or args.show):
+        log.info('main', '--output not used; assuming --show')
+        args.show = True
+
+    if args.outfn and args.skipIfExists:
+        # check whether the file is already there
+        try:
+            img = PIL.Image.open(args.outfn)
+            img.load()
+            log.debug('main', args.outfn, 'found - not generating new version')
+            if args.show:
+                img.show()
+            return
+        except OSError:
+            pass
 
     handle(args)
 
