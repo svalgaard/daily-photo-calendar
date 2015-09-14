@@ -6,11 +6,14 @@
 
 import re
 import argparse
-import sys
 import os
 import PIL.ImageFont
 import locale
 import datetime
+
+
+FONT_DNS = [os.path.join(os.path.dirname(os.path.realpath(__file__)),
+                         'fonts')]
 
 
 def RECheck(formats, rege, func=None):
@@ -67,42 +70,40 @@ def fontCheck(name):
 
     if _allfonts is None:
         _allfonts = {}
-        for dn in ('.',
-                   sys.path[0],
-                   '/usr/share/fonts/truetype/'
-                   '/System/Library/Fonts/',
-                   '/Library/Fonts/'):
+        for dn in FONT_DNS:
             if not os.path.isdir(dn):
                 continue
             for dirpath, dirnames, filenames in os.walk(dn):
                 for fn in filenames:
                     lfn = os.path.join(dirpath, fn)
-                    key, ext = os.path.splitext(fn.lower().replace(' ', '_'))
-                    if key in _allfonts:
-                        continue
-                    if ext in ['.ttf', '.ttc']:
-                        _allfonts[key] = lfn
+                    # Simply try to load the file as a font
+                    try:
+                        keysHere = set()
+                        for i in range(100):
+                            font = PIL.ImageFont.truetype(lfn, 10, i)
+                            key = '-'.join(font.getname())
+                            if not key or key[0] == '.' or 'PUA-' in key:
+                                continue
+                            key = key.lower().replace(' ', '_')
+                            if key in keysHere:
+                                # font indexes repeat after some time
+                                break
+                            if key in _allfonts:
+                                continue
+                            keysHere.add(key)
+                            _allfonts[key] = font
+                    except OSError:
+                        continue  # not a font
 
-    if ':' in name:
-        name, size = name.rsplit(':', 2)
-        dsize, size = int(size), int(size)
-    else:
-        dsize, size = None, 10
-    name = name.lower()
-
-    for sn, lfn in sorted(_allfonts.items()):
-        if name == sn:
-            # found!
-            font = PIL.ImageFont.truetype(lfn, size)
-            font.dlfn = lfn
-            font.dsize = dsize
-            return font
+    if name in _allfonts:
+        return _allfonts[name]
 
     # font not found
     print('Font %r not found' % name)
     print('Available fonts:')
-    for sn, lfn in sorted(_allfonts.items()):
-        print ('  %s (found in %s)' % (sn, lfn))
+    for sn, font in sorted(_allfonts.items()):
+        print ('  %s (found in %s)' % (sn, font.path))
+    print('(or maybe use --font-dir FONTDIR to add extra font directories)')
 
     raise argparse.ArgumentTypeError('Font %r not found' % name)
 

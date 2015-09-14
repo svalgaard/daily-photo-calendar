@@ -133,10 +133,7 @@ def textDraw(image, box, text, color, font, position=CENTER, squeezed=False,
 
 
 def scaleFont(font, newSize):
-    dlfn = font if type(font) == str else font.path
-    font = PIL.ImageFont.truetype(dlfn, newSize)
-    # font.dlfn = dlfn
-    # font.dsize = newSize
+    font = PIL.ImageFont.truetype(font.path, newSize, font.index)
     return font
 
 
@@ -165,7 +162,7 @@ def fitFontSize(font, text, box, squeezed=False):
             textsize = font.getmask(ttext[0]).size
         else:
             textsize = font.getsize(ttext[0])
-        # log.debug('fitFontSize', '==', textsize, 'for fontsize=', font.dsize)
+
         if textsize[0] <= w and textsize[1] <= h:
             del ttext[0]
         else:

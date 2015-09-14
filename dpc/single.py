@@ -56,9 +56,7 @@ def addPicture(image, args, goTOP=None):
 
     if args.text:
         # we are always slightly above or below the image
-        th = args.textFont.dsize
-        if not th or th <= 0:
-            th = int(mpI)
+        th = int(args.size[1] * args.marginInner / 100)
         if TOP:
             box = pics.intBox((mpO, h, w-mpO, h + th))  # text below image
         else:
@@ -145,7 +143,8 @@ for portrait pictures).'''
 
     pgrp = parser.add_argument_group('General setup')
     mmarg(pgrp.add_argument('--size', dest='size', default='1200x1050',
-                            help='size of a page in pixels '
+                            help='size of a page in pixels. Usually '
+                            '300 dpi is fine, i.e., 300 pixels/2.5 cm '
                             '(default %(default)s)',
                             metavar='SIZE',
                             type=argp.RECheck('WIDTHxHEIGHT', r'(\d+)x(\d+)',
@@ -176,6 +175,12 @@ for portrait pictures).'''
     pgrp.add_argument('-d', '--date', dest='date', required=True,
                       help='Date to show', metavar='DATE',
                       type=argp.dateCheck)
+    pgrp.add_argument('--font-dir', dest='fontDirs',
+                      default=argp.FONT_DNS,
+                      help='Add directory to search for fonts. Note you '
+                      'must use this option before specifying any fonts '
+                      '(default %s)' % ', '.join(argp.FONT_DNS),
+                      metavar='FONTDIR')
 
     pgrp = parser.add_argument_group('Picture')
     pgrp.add_argument('-p', '--picture', dest='imagefd', default=None,
