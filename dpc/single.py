@@ -15,11 +15,8 @@ from . import argp
 from . import boxes
 from . import events
 
-# FONT_BOLD = 'Raleway-Bold'
-# FONT_REGULAR = 'Raleway-Regular'
-
-FONT_BOLD = 'Tahoma_Bold'
-FONT_REGULAR = 'Tahoma'
+FONT_BOLD = 'roboto-black'
+FONT_REGULAR = 'roboto-medium'
 
 
 def addPicture(image, args, goTOP=None):

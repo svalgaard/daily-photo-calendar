@@ -1,2 +1,3 @@
 #
 include dpc-single
+recursive-include dpc/fonts *.*
