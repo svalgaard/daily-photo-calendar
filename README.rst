@@ -1,7 +1,8 @@
 daily-photo-calendar
 ====================
 
-This is work-in-progres and most things does not work.
+This is a work-in-progress.
+Currently you can create a page for a single day.
 
 Requirements
 ------------
