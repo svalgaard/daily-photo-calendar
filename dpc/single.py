@@ -59,7 +59,7 @@ def addPicture(image, args, goTOP=None):
             box = pics.intBox((mpO, h, w-mpO, h + th))  # text below image
         else:
             box = pics.intBox((mpO, y - th, w-mpO, y))
-        font = pics.scaleFont(args.textFont, 2*th//3)
+        font = pics.scaleFont(args.fontRegular, 2*th//3)
 
         pics.textDraw(image, box,
                       args.text, args.textColor,
@@ -184,10 +184,22 @@ for portrait pictures).'''
                       type=argp.dateCheck)
     pgrp.add_argument('--font-dir', dest='fontDirs',
                       default=argp.FONT_DNS,
-                      help='Add directory to search for fonts. Note you '
-                      'must use this option before specifying any fonts '
-                      '(default %s)' % ', '.join(argp.FONT_DNS),
+                      help='add directory to search for fonts. Note you '
+                      'must use this option before using any other font '
+                      'options (default %s)' % ', '.join(argp.FONT_DNS),
                       metavar='FONTDIR')
+    pgrp.add_argument('--font-regular', dest='fontRegular',
+                      default=FONT_REGULAR,
+                      help='text font for text '
+                      '(default %(default)s)',
+                      metavar='FONT',
+                      type=argp.fontCheck)
+    pgrp.add_argument('--font-bold', dest='fontBold',
+                      default=FONT_BOLD,
+                      help='text font for emphasised text '
+                      '(default %(default)s)',
+                      metavar='FONT',
+                      type=argp.fontCheck)
 
     pgrp = parser.add_argument_group('Output')
     pgrp.add_argument('-o', '--output', dest='outfn', default=None,
@@ -215,12 +227,6 @@ for portrait pictures).'''
                       help='text to show below image (default none)',
                       metavar='TEXT',
                       type=str)
-    mmarg(pgrp.add_argument('--text-font', dest='textFont',
-                            default=FONT_REGULAR,
-                            help='font for text to show below image '
-                            '(default %(default)s)',
-                            metavar='FONT',
-                            type=argp.fontCheck))
     mmarg(pgrp.add_argument('--text-color', dest='textColor',
                             default='#000000',
                             help='color of the text to show below image '
@@ -250,18 +256,6 @@ for portrait pictures).'''
                             '(default %(default)s)',
                             metavar='COLOR',
                             type=PIL.ImageColor.getrgb))
-    mmarg(pgrp.add_argument('--datebox-font', dest='dateboxTopBottomFont',
-                            default=FONT_REGULAR,
-                            help='font for the top/bottom part of the datebox '
-                            '(default %(default)s)',
-                            metavar='FONT',
-                            type=argp.fontCheck))
-    mmarg(pgrp.add_argument('--datebox-middle-font', dest='dateboxMiddleFont',
-                            default=FONT_BOLD,
-                            help='font for the middle part of the datebox '
-                            '(default %(default)s)',
-                            metavar='FONT',
-                            type=argp.fontCheck))
     mmarg(pgrp.add_argument('--datebox-top-size', dest='dateboxTopSize',
                             default=20,
                             help='height of datebox in %% to use for each of'
@@ -289,12 +283,6 @@ for portrait pictures).'''
                             help='datetext to show above the events '
                             '(default %(default)s)',
                             metavar='CONTENT'))
-    mmarg(pgrp.add_argument('--eventbox-title-font', dest='eventboxTitleFont',
-                            default=FONT_BOLD,
-                            help='font for the title of the event box '
-                            '(default %(default)s)',
-                            metavar='FONT',
-                            type=argp.fontCheck))
     mmarg(pgrp.add_argument('--eventbox-title-size', dest='eventboxTitleSize',
                             default=15,
                             help='height of eventbox in %% to use for '
@@ -308,12 +296,6 @@ for portrait pictures).'''
                             '(default %(default)s)',
                             metavar='COLOR',
                             type=PIL.ImageColor.getrgb))
-    mmarg(pgrp.add_argument('--eventbox-font', dest='eventboxFont',
-                            default=FONT_REGULAR,
-                            help='font for the main text in the event box '
-                            '(default %(default)s)',
-                            metavar='FONT',
-                            type=argp.fontCheck))
 
     pgrp = parser.add_argument_group('Monthly calendar (m)',
                                      'Also see --event-file above.')
@@ -330,18 +312,6 @@ for portrait pictures).'''
                       '(default %(default)s)',
                       metavar='DAY', action='append',
                       type=argp.rangeCheck(int, -6, 6))
-    mmarg(pgrp.add_argument('--monthbox-font', dest='monthboxFont',
-                            default=FONT_REGULAR,
-                            help='font for the text in the month box '
-                            '(default %(default)s)',
-                            metavar='FONT',
-                            type=argp.fontCheck))
-    mmarg(pgrp.add_argument('--monthbox-title-font', dest='monthboxTitleFont',
-                            default=FONT_BOLD,
-                            help='font for the title text in the month box '
-                            '(default %(default)s)',
-                            metavar='FONT',
-                            type=argp.fontCheck))
 
     mmarg(pgrp.add_argument('--monthbox-border-color',
                             dest='monthboxBorderColor',

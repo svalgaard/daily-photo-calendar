@@ -47,11 +47,11 @@ def datebox(args, f, image, box):
     log.debug('datebox', 'texts to insert', texts)
 
     # find font sizes
-    font = args.dateboxTopBottomFont
+    font = args.fontRegular
     font0 = pics.fitFontSize(font, texts[0], (w, sz))
     font1 = pics.fitFontSize(font, texts[2], (w, sz))
     fontS = font0 if font0.size <= font1.size else font1
-    fontC = pics.fitFontSize(args.dateboxMiddleFont, texts[1], cbox, True)
+    fontC = pics.fitFontSize(args.fontBold, texts[1], cbox, True)
 
     # color
     color = args.dateboxColor
@@ -74,7 +74,7 @@ def events(args, f, image, box):
     title = args.date.strftime(args.eventboxTitle)
     tbox = (x0, y0, x1, y0+sz)
     pics.textDraw(image, tbox, title, args.eventboxTitleColor,
-                  args.eventboxTitleFont,
+                  args.fontBold,
                   (0, pics.CENTER), False, True)
 
     # Find applicable events
@@ -91,7 +91,7 @@ def events(args, f, image, box):
         text = '%s: %s' % (dt, ev.text)
         log.debug('events', '%r ==> %s' % (ev, text))
         texts.append(text)
-    font = pics.fitFontSize(args.eventboxFont, texts, (w, sz))
+    font = pics.fitFontSize(args.fontRegular, texts, (w, sz))
     for i, text in enumerate(texts):
         ebox = (x0, y0+sz*(i+1), x1, y0+sz*(i+2))
         pics.textDraw(image, ebox, text,
@@ -129,7 +129,7 @@ def month(args, f, image, box):
     # "Title"
     days = list((day0 + datetime.timedelta(i)).strftime('%a')
                 for i in range(7))
-    font = pics.fitFontSize(args.monthboxTitleFont, days, (w0-4, ht-4))
+    font = pics.fitFontSize(args.fontBold, days, (w0-4, ht-4))
     for i in range(7):
         bx = (x0 + w0*i, y0, x0 + w0*(i+1), y0+ht)
         image.drw.rectangle(bx,
@@ -138,7 +138,7 @@ def month(args, f, image, box):
         pics.textDraw(image, bx, days[i],
                       args.monthboxTitleColor, font)
 
-    font = pics.fitFontSize(args.monthboxFont, '88', (w0-8, h0-8))
+    font = pics.fitFontSize(args.fontBold, '88', (w0-8, h0-8))
     evs = args.events[:]
     for week in range(6):
         for i in range(7):
