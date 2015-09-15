@@ -137,8 +137,7 @@ def mmarg(arg, **args):
 def main():
     desc = '''Create a single calendar page.
 
-In all cases where it makes sense and unless otherwise noted, all
-options can be supplied with two suboptions for landscape
+For most options, you can give two suboptions for landscape
 resp. portrait images. The two options should be separated with ~
 e.g., --margin-inner 4~5 (meaning 4% for landscape pictures and 5%
 for portrait pictures).'''
@@ -148,7 +147,27 @@ for portrait pictures).'''
                         help='Be more verbose',
                         action='store_true')
 
-    pgrp = parser.add_argument_group('General setup')
+    pgrp = parser.add_argument_group('(semi)required options')
+    pgrp.add_argument('-d', '--date', dest='date', required=True,
+                      help='Date to show', metavar='DATE',
+                      type=argp.dateCheck)
+    pgrp.add_argument('-o', '--output', dest='outfn', default=None,
+                      help='filename of output file',
+                      metavar='FILENAME')
+    pgrp.add_argument('--skip-if-output-exists', dest='skipIfExists',
+                      help='do nothing if the output file already exists '
+                      'and is a valid image file',
+                      action='store_true')
+    pgrp.add_argument('--show', dest='show', action='store_true',
+                      help='Show result, i.e., open a GUI window')
+
+    pgrp = parser.add_argument_group('general appearance')
+    reformat = r'([tb])((?:%s)+)' % '|'.join(boxes.getBoxTypes())
+    mmarg(pgrp.add_argument('-f', '--format', dest='format',
+                            default='tmde~tdme',
+                            help='format of each page (default %(default)s)',
+                            metavar='FORMAT',
+                            type=argp.RECheck(reformat, reformat)))
     mmarg(pgrp.add_argument('--size', dest='size', default='1200x1050',
                             help='size of a page in pixels. Usually '
                             '300 dpi is fine, i.e., 300 pixels/2.5 cm '
@@ -164,12 +183,6 @@ for portrait pictures).'''
                             metavar='RATIO', default='2.25',
                             help='inner margin in %% (default %(default)s)',
                             type=argp.rangeCheck(float, 0, 20)))
-    reformat = r'([tb])((?:%s)+)' % '|'.join(boxes.getBoxTypes())
-    mmarg(pgrp.add_argument('-f', '--format', dest='format',
-                            default='tmde~tdme',
-                            help='format of each page (default %(default)s)',
-                            metavar='FORMAT',
-                            type=argp.RECheck(reformat, reformat)))
     mmarg(pgrp.add_argument('--bgcolor', dest='bgcolor', default='#FFFFFF',
                             help='background color (default %(default)s)',
                             metavar='COLOR',
@@ -179,9 +192,6 @@ for portrait pictures).'''
                       help='Locale to use for dates etc (default %(default)s)',
                       metavar='LOCALE',
                       type=argp.localeCheckSet)
-    pgrp.add_argument('-d', '--date', dest='date', required=True,
-                      help='Date to show', metavar='DATE',
-                      type=argp.dateCheck)
     pgrp.add_argument('--font-dir', dest='fontDirs',
                       default=argp.FONT_DNS,
                       help='add directory to search for fonts. Note you '
@@ -201,18 +211,7 @@ for portrait pictures).'''
                       metavar='FONT',
                       type=argp.fontCheck)
 
-    pgrp = parser.add_argument_group('Output')
-    pgrp.add_argument('-o', '--output', dest='outfn', default=None,
-                      help='filename of output file',
-                      metavar='FILENAME')
-    pgrp.add_argument('--skip-if-output-exists', dest='skipIfExists',
-                      help='do nothing if the output file already exists '
-                      'and is a valid image file',
-                      action='store_true')
-    pgrp.add_argument('--show', dest='show', action='store_true',
-                      help='Show result')
-
-    pgrp = parser.add_argument_group('Picture')
+    pgrp = parser.add_argument_group('picture')
     pgrp.add_argument('-p', '--picture', dest='imagefd', default=None,
                       help='filename of picture to use',
                       metavar='FILENAME', required=True,
@@ -234,7 +233,7 @@ for portrait pictures).'''
                             metavar='COLOR',
                             type=PIL.ImageColor.getrgb))
 
-    pgrp = parser.add_argument_group('Datebox (d)')
+    pgrp = parser.add_argument_group('datebox (d)')
     mmarg(pgrp.add_argument('--datebox-top', dest='dateboxTop',
                             default='%A uge %V',
                             help='datetext to show above '
@@ -263,7 +262,7 @@ for portrait pictures).'''
                             metavar='SIZE',
                             type=argp.rangeCheck(float, 1, 49)))
 
-    pgrp = parser.add_argument_group('Events (e)')
+    pgrp = parser.add_argument_group('events (e)')
     pgrp.add_argument('-e', '--event-file', dest='events',
                       default=None, action='append',
                       help='eventfile to use - use several times '
@@ -297,7 +296,7 @@ for portrait pictures).'''
                             metavar='COLOR',
                             type=PIL.ImageColor.getrgb))
 
-    pgrp = parser.add_argument_group('Monthly calendar (m)',
+    pgrp = parser.add_argument_group('monthly calendar (m)',
                                      'Also see --event-file above.')
     pgrp.add_argument('--monthbox-firstweekday',
                       dest='monthboxFirstDay', default=0,
