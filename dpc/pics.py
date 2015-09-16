@@ -110,7 +110,7 @@ def textDraw(image, box, text, color, font, position=CENTER, squeezed=False,
         mask, offset = font.getmask2(text)
         textsize = mask.size
     else:
-        textsize = image.drw.textsize(text, font)
+        textsize = getSize(font, text, False)
 
     if type(position) not in (tuple, list):
         pos = [position, position]
@@ -124,7 +124,7 @@ def textDraw(image, box, text, color, font, position=CENTER, squeezed=False,
         elif pos[i] < 0:
             pos[i] = box[i] + boxsize[i] + pos[i] - textsize[i]
         else:
-            pos[i] = box[i]+pos[i]  # go from relative to absolute
+            pos[i] = box[i]+pos[i]
     if squeezed:
         pos[0] -= offset[0]
         pos[1] -= offset[1]
@@ -150,18 +150,19 @@ def fitFontSize(font, text, box, squeezed=False):
     else:
         w, h = box[2] - box[0], box[3] - box[1]
 
+    if not(text):
+        log.debug('fitFontSize', 'Empty text')
+        return scaleFont(font, 2*h)
+
     if type(text) == str:
         ttext = [text]
     else:
         ttext = text[:]
 
-    size = 2*h
+    size, textsize = 2*h, None
     while size > 1 and ttext:
         font = scaleFont(font, size)
-        if squeezed:
-            textsize = font.getmask(ttext[0]).size
-        else:
-            textsize = font.getsize(ttext[0])
+        textsize = getSize(font, ttext[0], squeezed)
 
         if textsize[0] <= w and textsize[1] <= h:
             del ttext[0]
@@ -171,3 +172,17 @@ def fitFontSize(font, text, box, squeezed=False):
               '<=', (w, h),
               'font.size=', font.size)
     return font
+
+
+def getSize(font, text, squeezed=False):
+    '''Get size of text including potential space under the baseline, e.g.,
+    gjpq'''
+
+    if squeezed:
+        return font.getmask(text).size
+
+    tsize1 = font.getsize(text)
+    tsize2 = font.getsize('ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+                          'abcdefghijklmnopqrstuvwxyz')
+
+    return (tsize1[0], max(tsize1[1], tsize2[1]))
