@@ -353,6 +353,29 @@ for portrait pictures).'''
                                 metavar='COLOR',
                                 type=PIL.ImageColor.getrgb))
 
+    pgrp = parser.add_argument_group('simple date box (s)')
+    mmarg(pgrp.add_argument('--simplebox-left', dest='simpleboxLeft',
+                            default='%A',
+                            help='datetext to show to the left '
+                            '(default %(default)s)',
+                            metavar='CONTENT'))
+    mmarg(pgrp.add_argument('--simplebox-middle', dest='simpleboxMiddle',
+                            default='%e',
+                            help='datetext to show in the middle '
+                            '(default %(default)s)',
+                            metavar='CONTENT'))
+    mmarg(pgrp.add_argument('--simplebox-right', dest='simpleboxRight',
+                            default='%B',
+                            help='datetext to show to the right '
+                            '(default %(default)s)',
+                            metavar='CONTENT'))
+    mmarg(pgrp.add_argument('--simplebox-color', dest='simpleboxColor',
+                            default='#000000',
+                            help='color of the simplebox text '
+                            '(default %(default)s)',
+                            metavar='COLOR',
+                            type=PIL.ImageColor.getrgb))
+
     args = parser.parse_args()
 
     try:

@@ -64,6 +64,68 @@ def datebox(args, f, image, box):
                   (pics.CENTER, 0))
 
 
+@boxType('s')
+def simplebox(args, f, image, box):
+    ''' left MIDDLE right, e.g, Thursday 28 October'''
+    x0, y0, x1, y1 = box
+    w, h = x1 - x0, y1 - y0
+
+    # determine text to write
+    texts = [args.simpleboxLeft,
+             args.simpleboxMiddle,
+             args.simpleboxRight]
+    texts = tuple(map(args.date.strftime, texts))
+    log.debug('datebox', 'texts to insert', texts)
+
+    # draw middle text
+    color = args.dateboxColor
+    fontM = pics.fitFontSize(args.fontBold, texts[1], (w, h), True)
+    pics.textDraw(image, box, texts[1], color, fontM, pics.CENTER, True)
+    spaceUsed = fontM.getmask(texts[1]).size
+
+    # draw left/right text
+    if w - spaceUsed[0] > 10:
+        leftRight = True
+        space = [(w-spaceUsed[0])//2, h]
+        if space[0] > spaceUsed[1]//2:
+            space[0] -= spaceUsed[1]//4
+    elif h - spaceUsed[1] > 10:
+        leftRight = False
+        space = [w, (h-spaceUsed[1])//2]
+        if space[1] > spaceUsed[1]//2:
+            space[1] -= spaceUsed[1]//4
+    else:
+        log.debug('simplebox', 'No space left for left/right text',
+                  (w, h), spaceUsed)
+        return
+
+    fontLR = pics.fitFontSize(args.fontRegular,
+                              [texts[0], texts[2]], space)
+
+    if fontLR.size > fontM.size//2:
+        fontLR = pics.scaleFont(fontLR, fontM.size//2)
+
+    if leftRight:
+        # actually do left/right text
+        pics.textDraw(image,
+                      (x0, y0, x0+space[0], y0+space[1]),
+                      texts[0], color, fontLR,
+                      (-1, pics.CENTER))
+        pics.textDraw(image,
+                      (x1-space[0], y1-space[1], x1, y1),
+                      texts[2], color, fontLR,
+                      (0, pics.CENTER))
+    else:
+        pics.textDraw(image,
+                      (x0, y0, x0+space[0], y0+space[1]),
+                      texts[0], color, fontLR,
+                      (pics.CENTER, -1))
+        pics.textDraw(image,
+                      (x1-space[0], y1-space[1], x1, y1),
+                      texts[2], color, fontLR,
+                      (pics.CENTER, 0))
+
+
 @boxType('e')
 def events(args, f, image, box):
     x0, y0, x1, y1 = box
