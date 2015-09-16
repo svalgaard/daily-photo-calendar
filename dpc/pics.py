@@ -160,14 +160,17 @@ def fitFontSize(font, text, box, squeezed=False):
         ttext = text[:]
 
     size, textsize = 2*h, None
-    while size > 1 and ttext:
-        font = scaleFont(font, size)
-        textsize = getSize(font, ttext[0], squeezed)
+    for text in ttext:
+        mn = 1
+        while mn < size:
+            test = (mn+size+1)//2
+            font = scaleFont(font, test)
+            textsize = getSize(font, text, squeezed)
 
-        if textsize[0] <= w and textsize[1] <= h:
-            del ttext[0]
-        else:
-            size -= 1
+            if textsize[0] <= w and textsize[1] <= h:
+                mn = test
+            else:
+                size = test-1
     log.debug('fitFontSize', 'Scaling', text, 'into', textsize,
               '<=', (w, h),
               'font.size=', font.size)
