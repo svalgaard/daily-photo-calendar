@@ -47,19 +47,15 @@ def datebox(args, f, image, box):
     log.debug('datebox', 'texts to insert', texts)
 
     # find font sizes
-    font = args.fontRegular
-    font0 = pics.fitFontSize(font, texts[0], (w, sz))
-    font1 = pics.fitFontSize(font, texts[2], (w, sz))
-    fontS = font0 if font0.size <= font1.size else font1
-    fontC = pics.fitFontSize(args.fontBold, texts[1], cbox, True)
+    fontS = pics.fitFontSize(args.fontRegular, [texts[0], texts[2]], (w, sz))
 
     # color
     color = args.dateboxColor
 
     pics.textDraw(image, (x0, y0, x1, y0+sz), texts[0], color, fontS,
                   (pics.CENTER, 0))
-    pics.textDraw(image, cbox, texts[1], color, fontC,
-                  pics.CENTER, True)
+    pics.textDraw(image, cbox, texts[1], color, args.fontBold,
+                  pics.CENTER, True, True)
     pics.textDraw(image, (x0, y1-sz, x1, y1), texts[2], color, fontS,
                   (pics.CENTER, 0))
 
@@ -191,7 +187,7 @@ def month(args, f, image, box):
     # "Title"
     days = list((day0 + datetime.timedelta(i)).strftime('%a')
                 for i in range(7))
-    font = pics.fitFontSize(args.fontBold, days, (w0-4, ht-4))
+    font = pics.fitFontSize(args.fontBold, days, (w0-4, ht-4), True)
     for i in range(7):
         bx = (x0 + w0*i, y0, x0 + w0*(i+1), y0+ht)
         image.drw.rectangle(bx,
@@ -200,7 +196,7 @@ def month(args, f, image, box):
         pics.textDraw(image, bx, days[i],
                       args.monthboxTitleColor, font)
 
-    font = pics.fitFontSize(args.fontBold, '88', (w0-8, h0-8))
+    font = pics.fitFontSize(args.fontBold, '88', (w0-8, h0-8), True)
     evs = args.events[:]
     for week in range(6):
         for i in range(7):
