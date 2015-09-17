@@ -1,0 +1,22 @@
+# -*- encoding: utf-8 -*-
+#
+# Public Danish holidays etc
+# Also see danish-extended.txt
+#
+
+8888-01-01;m;Nytårsdag
+
+easter-3;m;Skærtorsdag
+easter-2;m;Langfredag
+easter;m;Påskedag
+easter+1;m;2. påskedag
+easter+26;m;Store bededag
+easter+49;m;Pinsedag
+easter+50;m;2. pinsedag
+
+8888-06-05;m;Grundlovsdag
+
+8888-12-24;m;Juleaften
+8888-12-25;m;Juledag
+8888-12-26;m;2. juledag
+

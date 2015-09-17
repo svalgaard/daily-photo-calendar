@@ -1,0 +1,18 @@
+# -*- encoding: utf-8 -*-
+#
+# Public Danish holidays etc
+# Also see danish.txt
+#
+
+# "Special days" which are not public holidays in Denmark
+1940-04-09;g;Danmarks besættelse (halv indtil 12.00)
+1945-05-05;g;Danmarks Befrielse
+1219-06-15;g;Valdemarsdag
+
+# Royal family
+1972-02-05;g;Kronprisesse Mary
+1940-04-16;g;Dronning Margrethe II
+1944-04-29;g;Prinsesse Benedikte
+1968-05-26;g;Kronprins Frederik
+1969-06-07;g;Prins Joachim
+1934-06-11;g;Prins Henrik
