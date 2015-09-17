@@ -13,7 +13,7 @@ import datetime
 
 
 FONT_DNS = [os.path.join(os.path.dirname(os.path.realpath(__file__)),
-                         'fonts')]
+                         'resources', 'fonts')]
 
 
 def RECheck(formats, rege, func=None):
