@@ -156,6 +156,13 @@ for portrait pictures).'''
                       action='store_true')
     pgrp.add_argument('--show', dest='show', action='store_true',
                       help='Show result, i.e., open a GUI window')
+    pgrp.add_argument('-e', '--event-file', dest='events',
+                      default=None, action='append',
+                      help='eventfile to use - use several times '
+                      'to use multiple files '
+                      '(default %(default)s)',
+                      type=argparse.FileType('r'),
+                      metavar='FILE')
 
     pgrp = parser.add_argument_group('general appearance')
     reformat = r'([tb])((?:%s)+)' % '|'.join(boxes.getBoxTypes())
@@ -229,7 +236,9 @@ for portrait pictures).'''
                             metavar='COLOR',
                             type=PIL.ImageColor.getrgb))
 
-    pgrp = parser.add_argument_group('datebox (d)')
+    hlp = '''Simple box with three lines. By default Weekday / Day of month
+/ Month Year.'''
+    pgrp = parser.add_argument_group('datebox (d)', hlp)
     mmarg(pgrp.add_argument('--datebox-top', dest='dateboxTop',
                             default='%A uge %V',
                             help='datetext to show above '
@@ -258,14 +267,9 @@ for portrait pictures).'''
                             metavar='SIZE',
                             type=argp.rangeCheck(float, 1, 49)))
 
-    pgrp = parser.add_argument_group('events (e)')
-    pgrp.add_argument('-e', '--event-file', dest='events',
-                      default=None, action='append',
-                      help='eventfile to use - use several times '
-                      'to use multiple files '
-                      '(default %(default)s)',
-                      type=argparse.FileType('r'),
-                      metavar='FILE')
+    hlp = '''Show events in the near future.
+Also use --event-file (see above), otherwise this box will be almost empty.'''
+    pgrp = parser.add_argument_group('events (e)', hlp)
     mmarg(pgrp.add_argument('--eventbox-range', dest='eventboxRange',
                             default=14,
                             help='maximum number of days in the future for '
@@ -292,8 +296,10 @@ for portrait pictures).'''
                             metavar='COLOR',
                             type=PIL.ImageColor.getrgb))
 
-    pgrp = parser.add_argument_group('monthly calendar (m)',
-                                     'Also see --event-file above.')
+    hlp = '''Show a calendar with all days in the current month.
+If --event-file is used, some dates can be colormarked as days off.'''
+
+    pgrp = parser.add_argument_group('monthly calendar (m)', hlp)
     pgrp.add_argument('--monthbox-firstweekday',
                       dest='monthboxFirstDay', default=0,
                       help='first day of week. 0 is Monday, 6 is Sunday '
@@ -349,7 +355,9 @@ for portrait pictures).'''
                                 metavar='COLOR',
                                 type=PIL.ImageColor.getrgb))
 
-    pgrp = parser.add_argument_group('simple date box (s)')
+    hlp = '''Simple (wide or tall) layout with date in the middle, and
+month and weekday to the left/right'''
+    pgrp = parser.add_argument_group('simple date box (s)', hlp)
     mmarg(pgrp.add_argument('--simplebox-left', dest='simpleboxLeft',
                             default='%A',
                             help='datetext to show to the left '
