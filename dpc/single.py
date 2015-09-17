@@ -38,11 +38,6 @@ def addPicture(image, args, goTOP=None):
             args.image = args.image.rotateCW()
         return image
 
-    # margin in pixels
-    mpO = args.size[1] * args.marginOuter / 100
-    mpI = args.size[1] * args.marginInner / 100
-    log.debug('handle', 'Margins in pixels:', mpO, mpI)
-
     x, y, w, h = 0, 0, image.size[0], image.size[1]
     h = int(image.size[0] / args.ratio)
     if not TOP:
@@ -54,11 +49,13 @@ def addPicture(image, args, goTOP=None):
 
     if args.text:
         # we are always slightly above or below the image
-        th = int(args.size[1] * args.marginInner / 100)
+        th = args.marginInner
+        x0, x1 = args.marginOuter, w-args.marginOuter
         if TOP:
-            box = pics.intBox((mpO, h, w-mpO, h + th))  # text below image
+            # text below image
+            box = pics.intBox((x0, h, x1, h + th))
         else:
-            box = pics.intBox((mpO, y - th, w-mpO, y))
+            box = pics.intBox((x0, y - th, x1, y))
         font = pics.scaleFont(args.fontRegular, 2*th//3)
 
         pics.textDraw(image, box,
@@ -67,12 +64,13 @@ def addPicture(image, args, goTOP=None):
         log.debug('handle', box, 'Text', repr(args.text))
 
     # determine location of remaining space
-    a, b, c, d = mpO, mpO, image.size[0] - mpO, image.size[1] - mpO
+    a, b = args.marginOuter, args.marginOuter
+    c, d = image.size[0] - args.marginOuter, image.size[1] - args.marginOuter
     if TOP:
         # at the bottom
-        b = h + mpI
+        b = h + args.marginInner
     else:
-        d = y - mpI
+        d = y - args.marginInner
 
     image.box = pics.intBox((a, b, c, d))
     return image
@@ -82,20 +80,18 @@ def findContentBoxes(image, args):
     log.debug('handle', image.box, 'Content-area')
     fmts = args.format[1]
 
-    mpI = args.size[1] * args.marginInner / 100
-
     boxes, boxCount = [], len(fmts)
     w, h = image.box[2]-image.box[0], image.box[3]-image.box[1]
     for i in range(boxCount):
         a, b, c, d = image.box
         if w > h:
             # landscape
-            boxw = (w - mpI*(boxCount-1)) / boxCount
-            a += (boxw + mpI) * i
+            boxw = (w - args.marginInner*(boxCount-1)) / boxCount
+            a += (boxw + args.marginInner) * i
             c = a + boxw
         else:
-            boxh = (h - mpI*(boxCount-1)) / boxCount
-            b += (boxh + mpI) * i
+            boxh = (h - args.marginInner*(boxCount-1)) / boxCount
+            b += (boxh + args.marginInner) * i
             d = b + boxh
         boxes.append((fmts[i], pics.intBox((a, b, c, d))))
     return boxes
@@ -395,6 +391,11 @@ for portrait pictures).'''
         evs += events.readEventFile(efd)
     evs.sort()
     args.events = list(evs)
+
+    # convert margins to pixels instead of %
+    args.marginOuter = int(args.size[1] * args.marginOuter / 100.)
+    args.marginInner = int(args.size[1] * args.marginInner / 100.)
+    log.debug('main', 'Margins in pixels', args.marginInner, args.marginOuter)
 
     # Now check some of options
     log.VERBOSE = 2 if args.verbose else 1
